@@ -29,7 +29,10 @@ TypeOkR == /\ TypeOk
            /\ parity \in {0,1}
            /\ reads \in [Tr -> SUBSET Obj]
            /\ writes \in [Tr -> SUBSET Obj]
+                                          (*
            /\ tenvBar \in [CT -> [Val -> Obj]]
+           /\ ord \in [to: [1..N -> CT] \cup {NULL}, benv: [CT -> [Obj -> Val]] \cup {NULL}]
+           *)
 
 InitR == /\ Init
          /\ fateIsSet = FALSE
@@ -42,35 +45,35 @@ InitR == /\ Init
          /\ tenvBar = NULL
 
 StartTransactionR(t) == /\ StartTransaction(t)
-                        /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+                        /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 BeginRdR(t, obj) == /\ BeginRd(t, obj)
-                    /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+                    /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
                        /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, env|->env, wr|->[o \in writes[t] |-> env[t][o]]])
                        /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
-                       /\ UNCHANGED <<fateIsSet, canIssue, parity, writes, tenvBar>>
+                       /\ UNCHANGED <<fateIsSet, canIssue, parity, writes, ord, tenvBar>>
 
 BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
-                         /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+                         /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
                        /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, env|->env, wr|->[o \in writes[t] |-> env[t][o]]])
                        /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
-                       /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, tenvBar>>
+                       /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, ord, tenvBar>>
 
 AbortWrR(t, obj, val) == /\ AbortWr(t, obj,val)
                          /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err])
-                         /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+                         /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 CommitR(t) == /\ Commit(t)
               /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, env|->env])
-              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 AbortR(t) == /\ Abort(t)
              /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, env|->env])
-             /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, tenvBar>>
+             /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 (* Get the order in which this transactionruns *)
 Ord(t) == CHOOSE i \in DOMAIN op.to : op.to[i] = t
@@ -90,9 +93,21 @@ SetFate == /\ Done
                 [t \in CT |-> benv[to[Ord(t)]]]
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
-Issue == FALSE 
+Issue == LET e == Head(h)
+             Toggle(f) == IF f = Flip THEN Flop ELSE Flip
+             t == e.tr
+             obj == e.arg[1]
+             val == e.arg[2] IN
+         /\ fateIsSet
+         /\ h # <<>>
+         /\ canIssue' = TRUE
+         /\ h' = IF canIssue THEN Tail(h) ELSE h
+         /\ h' # <<>>        
+         /\ tenvBar' = IF tstate[e.tr] = Committed /\ e.op = "w" THEN [tenvBar EXCEPT ![t][obj]=val]
+                       ELSE tenvBar
+         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, parity, reads, writes, ord>>
 
-vv == <<op, arg, rval, tstate, tid, snap, env, anc, h, fateIsSet, canIssue, parity, reads, writes>>
+vv == <<op, arg, rval, tstate, tid, snap, env, anc, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>
@@ -154,6 +169,5 @@ Ser == INSTANCE SerializabilityD WITH
     eval <- evalBar,
     ff <- ffBar,
     Vinit <- V0
-
 
 ====
