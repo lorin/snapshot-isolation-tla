@@ -29,7 +29,7 @@ BeginRdR(t, obj) == /\ BeginRd(t, obj)
 
 EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
                        /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val])
-                       /\ reads' = IF obj \in writes THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
+                       /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
                        /\ UNCHANGED <<fateIsSet, canIssue, parity, writes>>
 
 BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
@@ -38,23 +38,24 @@ BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
 EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
                        /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok])
                        /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
-                       /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads>>
+                       /\ UNCHANGED <<fateIsSet, canIssue, parity, reads>>
 
 AbortWrR(t, obj, val) == /\ AbortWr(t, obj,val)
                          /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err])
-                         /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes>>
+                         /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes>>
 
 CommitR(t) == /\ Commit(t)
               /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok])
-              /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes>>
+              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes>>
 
 AbortR(t) == /\ Abort(t)
              /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok])
-             /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes>>
+             /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes>>
 
 SetFate == /\ Done
            /\ fateIsSet = FALSE
            /\ fateIsSet' = TRUE
+           /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
 Issue == FALSE 
 
