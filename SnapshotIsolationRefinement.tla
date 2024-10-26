@@ -135,8 +135,7 @@ tstateBar == [t \in TrR |->
                 CASE ~canIssue                 -> Open
                   [] canIssue /\ s = Unstarted -> Open
                   [] canIssue /\ s = Open      -> Open
-                  [] canIssue /\ s = Committed -> Committed
-                  [] canIssue /\ s = Aborted   -> Aborted]
+                  [] canIssue /\ s = Committed -> Committed]
 
 ffBar == LET Parity(hh) == Len(SelectSeq(hh, LAMBDA e: e.op \in {"r", "w"})) % 2
              p == Parity(h)
