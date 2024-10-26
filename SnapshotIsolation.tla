@@ -28,7 +28,6 @@ VARIABLES
     tid,       (* timestamp of each transaction *)
     snap,      (* database snapshot used by each transaction *)
     env,       (* environment of each transaction *)
-    tstate,    (* state of each transaction *)
 
     (**********************)
     (* history variables  *)
@@ -97,15 +96,47 @@ BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ rval' = [rval EXCEPT ![t]=Busy]
                         /\ UNCHANGED  <<tstate, tid, snap, env, anc>>
 
+(*******************************************************************)
+(* True if transaction *t* is active and has modified object *obj* *)
+(*******************************************************************)
+ActiveWrite(t, obj) == /\ tstate[t] = Open
+                       /\ env[t][obj] # snap[t][obj]
+
+(***********************************************************************)
+(* True if transaction *t* is committed and has modified object *obj* *)
+(**********************************************************************)
+CommittedWrite(t, obj) == /\ tstate[t] = Committed
+                       /\ env[t][obj] # snap[t][obj]
+
+(***************************************************************************)
+(* Two transactions are concurrent if neither is the ancestor of the other *)
+(***************************************************************************)
+Concurrent(t1, t2) == /\ t1 \notin anc[t2]
+                      /\ t2 \notin anc[t1]
+
+(*********************************************************************************************************)
+(* True if there is another transaction that has a write conflict with transaction *t* with object *obj* *)
+(*********************************************************************************************************)
+WriteConflict(t, obj) == \E tr \in Tr \{t} : CommittedWrite(tr, obj) /\ Concurrent(t, tr)
+
 EndWr(t, obj, val) == /\ op[t] = "w"
                       /\ arg[t] = <<obj, val>>
                       /\ rval[t] = Busy
+                      /\ ~ \E tr \in Tr \ {t} : \/ ActiveWrite(tr, obj)
+                      /\ ~ WriteConflict(t, obj)
                       /\ env' = [env EXCEPT ![t][obj]=val]
                       /\ rval' = [rval EXCEPT ![t]=Ok]
                       /\ UNCHANGED  <<op, arg, tstate, tid, snap, anc>>
 
-\* TODO: implement this
-AbortWr(t, obj, val) == FALSE
+
+AbortWr(t, obj, val) == /\ op[t] = "w"
+                        /\ rval[t] = Busy
+                        /\ WriteConflict(t, obj)
+                        /\ op' = [op EXCEPT ![t] = "a"]
+                        /\ arg' = [arg EXCEPT ![t] = <<>>]
+                        /\ rval' = [rval EXCEPT ![t]=Err]
+                        /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+                      /\ UNCHANGED  <<tid, snap, anc, env>>
 
 Abort(t) == /\ tstate[t] = Open
             /\ rval[t] # Busy
@@ -122,7 +153,7 @@ Commit(t) == /\ tstate[t] = Open
              /\ arg' = [arg EXCEPT ![t] = <<>>]
              /\ rval' = [rval EXCEPT ![t]=Ok]
              /\ tstate' = [tstate EXCEPT ![t] = Committed]
-             /\ UNCHANGED <<tid, snap, env>>
+             /\ UNCHANGED <<tid, snap, env, anc>>
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
 v == <<op, arg, rval, tstate, tid, snap, env, anc>>

@@ -3,11 +3,6 @@ EXTENDS SnapshotIsolation
 
 Terminates == <> Done
 
-(***************************************************************************)
-(* Two transactions are concurrent if neither is the ancestor of the other *)
-(***************************************************************************)
-Concurrent(t1, t2) == /\ t1 \notin anc[t2]
-                      /\ t2 \notin anc[t1]
 
 (*************************************************)
 (* True if transaction *t* modified object *obj* *)
@@ -24,6 +19,7 @@ ConcurrentWrite == \E t1,t2 \in Tr:
                     /\ Concurrent(t1, t2)
                     /\ \E obj \in Obj : /\ Wrote(t1, obj) 
                                         /\ Wrote(t2, obj) 
+                                        /\ env[t1][obj] # env[t2][obj]
 
 NoConcurrentWrites == ~ ConcurrentWrite
 
