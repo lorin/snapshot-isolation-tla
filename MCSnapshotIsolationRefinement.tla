@@ -19,7 +19,8 @@ Alias == [
     benvBar |-> ord.benv,
     evalBar |-> evalBar,
     ffBar |-> ffBar,
-    h |-> h
+    h |-> h,
+    parity |-> parity
     (*
     Init |-> Ser!Init,
     Initialized |-> Ser!Initialized,
