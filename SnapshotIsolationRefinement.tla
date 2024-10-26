@@ -1,5 +1,7 @@
 ---- MODULE SnapshotIsolationRefinement ----
-EXTENDS SnapshotIsolation, Naturals, Sequences
+EXTENDS SnapshotIsolation, Naturals, Sequences, FiniteSets
+
+CONSTANTS NULL
 
 VARIABLES h, fateIsSet, canIssue, parity, reads, writes
 
@@ -56,6 +58,22 @@ SetFate == /\ Done
            /\ fateIsSet = FALSE
            /\ fateIsSet' = TRUE
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
+
+(* Refinement transactions *)
+TrR == Tr \ {T0}
+
+(* Committed transactions *)
+CT == {t \in TrR: tstate[t] = Committed}
+
+N == Cardinality(CT) 
+
+ord == IF ~fateIsSet THEN [to|->NULL, benv|->NULL]
+       ELSE CHOOSE r \in [to:[1..N -> CT], benv:[1..N+1 -> [Obj -> Val]]]:
+        /\ r.benv[1] = SnapInit                         (* first environment msut be the initialization *)
+        /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
+        /\ \A i \in 1..N : LET t == r.to[i] IN 
+            /\ \A obj \in reads[t] : r.benv[i][obj] = snap[t][obj] (* all non-written reads have to be consistent with transaction's snapshot *)
+            /\ \A obj \in writes[t] : r.benv[i+1][obj] = env[t][obj] (* all writes have to be conssitent with transaction's environment *)
 
 Issue == FALSE 
 
