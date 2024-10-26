@@ -50,9 +50,10 @@ Init == /\ op = [t \in Tr |-> "-"]
 (* Maximum value of a set *)
 Max(S) == CHOOSE x \in S : \A y \in S \ {x} : x >= y
 
-
 (* Latest committted transaction *)
-LCT == CHOOSE t \in Tr : tstate[t] = Committed /\ ~ \E tr: tstate[tr]=Committed /\ tid[tr] > tid[t]
+LCT == CHOOSE t \in Tr : /\ tstate[t] = Committed 
+                         /\ ~ \E tr: /\ tstate[tr]=Committed 
+                                     /\ tid[tr] > tid[t]
 
 StartTransaction(t) == 
     LET tl == LCT
@@ -115,7 +116,7 @@ Commit(t) == /\ tstate[t] = Open
              /\ UNCHANGED <<tid, snap, env>>
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
-v == <<op, arg, tstate, tid, snap, env>>
+v == <<op, arg, rval, tstate, tid, snap, env>>
 Termination == Done /\ UNCHANGED v
 
 Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
