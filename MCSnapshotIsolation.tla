@@ -1,0 +1,5 @@
+---- MODULE MCSnapshotIsolation ----
+EXTENDS SnapshotIsolation
+
+
+====
