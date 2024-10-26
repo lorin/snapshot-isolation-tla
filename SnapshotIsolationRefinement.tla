@@ -21,7 +21,7 @@ TypeOkR == /\ TypeOk
                                [] e.op = "w" -> Obj \X Val
                                [] OTHER      -> { <<>> }
                 /\ e.rval \in Val \cup {Ok, Err}
-                /\ e.env \in [Tr -> [Obj -> Val]]
+                /\ e.tstate \in [Tr -> {Open, Committed, Aborted}]
                 /\ e.op \in {"r", "w"} => /\ DOMAIN e.wr \subseteq Obj 
                                           /\ \A obj \in DOMAIN e.wr : e.wr[obj] \in Val
            /\ fateIsSet \in BOOLEAN
@@ -49,7 +49,7 @@ BeginRdR(t, obj) == /\ BeginRd(t, obj)
                     /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, env|->env, wr|->[o \in writes[t] |-> env[t][o]]])
+                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> env[t][o]]])
                        /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
                        /\ UNCHANGED <<fateIsSet, canIssue, parity, writes, ord, tenvBar>>
 
@@ -57,20 +57,20 @@ BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
                          /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, env|->env, wr|->[o \in writes[t] |-> env[t][o]]])
+                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> env[t][o]]])
                        /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
                        /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, ord, tenvBar>>
 
 AbortWrR(t, obj, val) == /\ AbortWr(t, obj,val)
-                         /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err])
+                         /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err, tstate|->[tstate EXCEPT ![t]=Aborted]])
                          /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 CommitR(t) == /\ Commit(t)
-              /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, env|->env])
+              /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, tstate|->[tstate EXCEPT ![t]=Committed]])
               /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 AbortR(t) == /\ Abort(t)
-             /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, env|->env])
+             /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, tstate|->[tstate EXCEPT ![t]=Aborted]])
              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 (* Get the order in which this transactionruns *)
@@ -135,15 +135,16 @@ tstateBar == [t \in TrR |->
                 CASE ~canIssue                 -> Open
                   [] canIssue /\ s = Unstarted -> Open
                   [] canIssue /\ s = Open      -> Open
-                  [] canIssue /\ s = Committed -> Committed]
+                  [] canIssue /\ s = Committed -> Committed
+                  [] canIssue /\ s = Aborted   -> Aborted]
 
 ffBar == LET Parity(hh) == Len(SelectSeq(hh, LAMBDA e: e.op \in {"r", "w"})) % 2
              p == Parity(h)
              opp == Head(h).op IN
     CASE ~canIssue              -> Flip
-      [] canIssue /\ opp \in {"r", "w"} /\ parity = p    -> Flop
+      [] canIssue /\ opp    \in {"r", "w"} /\ parity = p -> Flop
       [] canIssue /\ opp \notin {"r", "w"} /\ parity = p -> Flip
-      [] canIssue /\ opp \in {"r", "w"} /\ parity # p    -> Flip
+      [] canIssue /\ opp    \in {"r", "w"} /\ parity # p -> Flip
       [] canIssue /\ opp \notin {"r", "w"} /\ parity # p -> Flop
 
 fateBar == IF ~fateIsSet THEN NULL
