@@ -50,9 +50,14 @@ Init == /\ op = [t \in Tr |-> "-"]
 (* Maximum value of a set *)
 Max(S) == CHOOSE x \in S : \A y \in S \ {x} : x >= y
 
+
+(* Latest committted transaction *)
+LCT == CHOOSE t \in Tr : tstate[t] = Committed /\ ~ \E tr: tstate[tr]=Committed /\ tid[tr] > tid[t]
+
 StartTransaction(t) == 
-    LET tl ==  CHOOSE t \in Tr : state[tr] = Committed /\ ~ \E tr: state[tr]=Committed /\ tid[tr] > tid[t] (* latest committed transaction *)
-        mxid == Max({tid[t] : t \in Tr} \ {None}) (* maximum transaction id *)
+    LET tl == LCT
+        mxid == Max({tid[tr] : tr \in Tr} \ {None}) (* maximum transaction id *)
+    IN
     /\ tstate[t] = Unstarted
     /\ op' = [op EXCEPT ![t]="s"]
     /\ arg' = [arg EXCEPT ![t] = <<>>]
@@ -89,7 +94,7 @@ EndWr(t, obj, val) == /\ op[t] = "w"
                       /\ rval' = [rval EXCEPT ![t]=Ok]
                       /\ UNCHANGED  <<op, arg, tstate, tid, snap>>
 
-(* TODO: implement this *)
+\* TODO: implement this
 AbortWr(t, obj, val) == FALSE
 
 Abort(t) == /\ tstate[t] = Open
