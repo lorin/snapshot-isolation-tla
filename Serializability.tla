@@ -1,5 +1,5 @@
 ---- MODULE Serializability ----
-EXTENDS Naturals, Sequences, FiniteSets, HistoryOps
+EXTENDS Naturals, Sequences, FiniteSets
 
 CONSTANTS Tr, Obj, Pred, Val,
           Undefined, 
@@ -9,6 +9,7 @@ CONSTANTS Tr, Obj, Pred, Val,
           Vinit, 
           T0, None
 
+(* To check refinement in TLC, we need to specify these as constants *)
 \* T0 == CHOOSE t : t \notin Tr
 \* None == CHOOSE v : v \notin Obj \union (Obj \X Val) \union Pred
 
@@ -38,7 +39,9 @@ VARIABLES
 v == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, eval, ff>>
 
 (* committed transactions *)
-CTs == {t \in Tr: fate[t] = Committed}
+CT == {t \in Tr: fate[t] = Committed}
+
+N == Cardinality(CT)
 
 (* Generate all permuted sequences of the set S *)
 Orderings(S) == {seq \in [1..Cardinality(S) -> S] : \A i,j \in DOMAIN seq : seq[i] = seq[j] => i = j}
@@ -53,9 +56,9 @@ TypeOk == /\ tr \in Tr \union {T0}
           /\ rval \in Rval
           /\ tstate \in [Tr -> {Open, Committed, Aborted}]
           /\ fate \in [Tr -> {Committed, Aborted}]
-          /\ to \in Orderings(CTs)
-          /\ benv \in [1..Cardinality(CTs)+1 -> [Obj -> Val]]
-          /\ tenv \in [Tr -> [Obj -> Val]]
+          /\ to \in Orderings(CT)
+          /\ benv \in [1..N+1 -> [Obj -> Val]]
+          /\ tenv \in [CT -> [Obj -> Val]]
           /\ eval \in [Pred -> [[Obj -> Val] -> SUBSET Obj]]
           /\ ff \in {Flip, Flop}
 
@@ -73,9 +76,9 @@ Init == /\ tr = T0
         /\ rval = Vinit
         /\ tstate = [t \in Tr |-> Open]
         /\ fate \in [Tr -> {Committed, Aborted}]
-        /\ to \in Orderings(CTs)
-        /\ benv \in [1..Cardinality(CTs)+1 -> [Obj -> Val]]
-        /\ tenv \in {f \in [Tr -> [Obj -> Val]] : \A t \in CTs: f[t] = benv[Ord(t)]}
+        /\ to \in Orderings(CT)
+        /\ benv \in [1..N+1 -> [Obj -> Val]]
+        /\ tenv \in {f \in [CT -> [Obj -> Val]] : \A t \in CT: f[t] = benv[Ord(t)]}
         /\ eval \in [Pred -> [[Obj -> Val] -> SUBSET Obj]]
         /\ ff \in {Flip, Flop}
 
@@ -95,7 +98,8 @@ PredRead(t, P) == /\ tstate[t] = Open
                   /\ tr' = t
                   /\ op' = "p"
                   /\ arg' = P
-                  /\ rval' = eval[P][tenv[t]]
+                  /\ rval' \in Obj
+                  /\ fate[t] = Committed => rval' = eval[P][tenv[t]]
                   /\ ff' = Toggle(ff)
                   /\ UNCHANGED <<tstate, fate, to, tenv, benv, eval>>
 
@@ -104,7 +108,7 @@ Write(t, obj, val) == /\ tstate[t] = Open
                       /\ op' = "w"
                       /\ arg' = <<obj, val>>
                       /\ rval' = Ok
-                      /\ tenv' = [tenv EXCEPT ![t] = [@ EXCEPT ![obj]=val]]
+                      /\ tenv' = IF fate[t] = Committed THEN [tenv EXCEPT ![t] = [@ EXCEPT ![obj]=val]] ELSE tenv
                       /\ ff' = Toggle(ff)
                       /\ UNCHANGED <<tstate, fate, to, benv, eval>>
 
@@ -141,7 +145,7 @@ M(e1, e2) == Cardinality({obj \in Obj : e1[obj]=e2[obj]})
 (*                                                                                         *)
 (* A helper function for use in fairness properties.                                       *)
 (*******************************************************************************************)
-W(j, k) ==  \E t \in CTs, obj \in Obj, val \in Val : 
+W(j, k) ==  \E t \in CT, obj \in Obj, val \in Val : 
             /\ Write(t, obj, val)
             /\ M(tenv[t],  benv[Ord(t)+1])=j
             /\ M(tenv'[t], benv[Ord(t)+1])=k
