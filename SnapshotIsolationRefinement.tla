@@ -103,7 +103,7 @@ Issue == LET e == Head(h)
          /\ h' # <<>>        
          /\ tenvBar' = IF tstate[e.tr] = Committed /\ e.op = "w" THEN [tenvBar EXCEPT ![t][obj]=val]
                        ELSE tenvBar
-         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, parity, reads, writes, ord>>
+         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, fateIsSet, parity, reads, writes, ord>>
 
 vv == <<op, arg, rval, tstate, tid, snap, env, anc, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
@@ -167,5 +167,7 @@ Ser == INSTANCE SerializabilityD WITH
     eval <- evalBar,
     ff <- ffBar,
     Vinit <- V0
+
+SerSpec == Ser!SpecD
 
 ====
