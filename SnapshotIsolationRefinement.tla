@@ -9,8 +9,8 @@ TypeOkR == /\ TypeOk
            /\ fateIsSet \in BOOLEAN
            /\ canIssue \in BOOLEAN
            /\ parity \in {0,1}
-           /\ reads \in [Tr -> Obj]
-           /\ writes \in [Tr -> Obj]
+           /\ reads \in [Tr -> SUBSET Obj]
+           /\ writes \in [Tr -> SUBSET Obj]
 
 
 InitR == /\ Init
