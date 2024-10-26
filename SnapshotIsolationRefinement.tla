@@ -29,10 +29,8 @@ TypeOkR == /\ TypeOk
            /\ parity \in {0,1}
            /\ reads \in [Tr -> SUBSET Obj]
            /\ writes \in [Tr -> SUBSET Obj]
-                                          (*
-           /\ tenvBar \in [CT -> [Val -> Obj]]
-           /\ ord \in [to: [1..N -> CT] \cup {NULL}, benv: [CT -> [Obj -> Val]] \cup {NULL}]
-           *)
+           /\ tenvBar \in [CT -> [Obj -> Val]] \cup {NULL}
+           /\ ord \in [to: [1..N -> CT] \cup {NULL}, benv: [1..N+1 -> [Obj -> Val]] \cup {NULL}]
 
 InitR == /\ Init
          /\ fateIsSet = FALSE
@@ -76,7 +74,7 @@ AbortR(t) == /\ Abort(t)
              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 (* Get the order in which this transactionruns *)
-Ord(t) == CHOOSE i \in DOMAIN op.to : op.to[i] = t
+Ord(t) == CHOOSE i \in DOMAIN ord.to : ord.to[i] = t
 
 SetFate == /\ Done
            /\ fateIsSet = FALSE
@@ -90,7 +88,7 @@ SetFate == /\ Done
            /\ tenvBar' = LET ordp == ord'
                              benv == ordp.benv
                              to == ordp.to IN
-                [t \in CT |-> benv[to[Ord(t)]]]
+                [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
 Issue == LET e == Head(h)
