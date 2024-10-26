@@ -24,10 +24,17 @@ VARIABLES
     (**********************)
     (* internal variables *)
     (**********************)
-    tstate,  (* state of each transaction *)
-    tid,     (* timestamp of each transaction *)
-    snap,    (* database snapshot used by each transaction *)
-    env      (* environment of each transaction *)
+    tstate,    (* state of each transaction *)
+    tid,       (* timestamp of each transaction *)
+    snap,      (* database snapshot used by each transaction *)
+    env,       (* environment of each transaction *)
+    tstate,    (* state of each transaction *)
+
+    (**********************)
+    (* history variables  *)
+    (**********************)
+    anc        (* ancestors of each transaction *)
+
 
 SnapInit == [obj \in Obj |-> V0]
 
@@ -46,6 +53,7 @@ Init == /\ op = [t \in Tr |-> "-"]
         /\ tstate = [t \in Tr |-> IF t=T0 THEN Committed ELSE Unstarted]
         /\ snap = [t \in Tr |-> SnapInit]
         /\ env = [t \in Tr |-> SnapInit]
+        /\ anc       = [t \in Tr |-> {}]
 
 (* Maximum value of a set *)
 Max(S) == CHOOSE x \in S : \A y \in S \ {x} : x >= y
@@ -67,33 +75,34 @@ StartTransaction(t) ==
     /\ tid' = [tid EXCEPT ![t]=mxid+1]
     /\ snap' = [snap EXCEPT ![t]=env[tl]]
     /\ env' = [env EXCEPT ![t]=env[tl]]
+    /\ anc' = [anc EXCEPT ![t]={tl} \union anc[tl]]
 
 BeginRd(t, obj) == /\ tstate[t] = Open
                    /\ rval[t] # Busy
                    /\ op' = [op EXCEPT ![t]="r"]
                    /\ arg' = [arg EXCEPT ![t]=obj]
                    /\ rval' = [rval EXCEPT ![t]=Busy]
-                   /\ UNCHANGED  <<tstate, tid, snap, env>>
+                   /\ UNCHANGED  <<tstate, tid, snap, env, anc>>
 
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
                       /\ val = env[t][obj]
                       /\ rval' = [rval EXCEPT ![t]=val]
-                      /\ UNCHANGED <<op, arg, tstate, tid, snap, env>>
+                      /\ UNCHANGED <<op, arg, tstate, tid, snap, env, anc>>
 
 BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ rval[t] # Busy
                         /\ op' = [op EXCEPT ![t]="w"]
                         /\ arg' = [arg EXCEPT ![t] = <<obj, val>>]
                         /\ rval' = [rval EXCEPT ![t]=Busy]
-                        /\ UNCHANGED  <<tstate, tid, snap, env>>
+                        /\ UNCHANGED  <<tstate, tid, snap, env, anc>>
 
 EndWr(t, obj, val) == /\ op[t] = "w"
                       /\ arg[t] = <<obj, val>>
                       /\ rval[t] = Busy
                       /\ env' = [env EXCEPT ![t][obj]=val]
                       /\ rval' = [rval EXCEPT ![t]=Ok]
-                      /\ UNCHANGED  <<op, arg, tstate, tid, snap>>
+                      /\ UNCHANGED  <<op, arg, tstate, tid, snap, anc>>
 
 \* TODO: implement this
 AbortWr(t, obj, val) == FALSE
@@ -104,7 +113,7 @@ Abort(t) == /\ tstate[t] = Open
             /\ arg' = [arg EXCEPT ![t] = <<>>]
             /\ rval' = [rval EXCEPT ![t]=Ok]
             /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-            /\ UNCHANGED <<tid, snap, env>>
+            /\ UNCHANGED <<tid, snap, env, anc>>
 
 Commit(t) == /\ tstate[t] = Open
              /\ rval[t] # Busy
@@ -116,7 +125,7 @@ Commit(t) == /\ tstate[t] = Open
              /\ UNCHANGED <<tid, snap, env>>
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
-v == <<op, arg, rval, tstate, tid, snap, env>>
+v == <<op, arg, rval, tstate, tid, snap, env, anc>>
 
 Termination == Done /\ UNCHANGED v
 
