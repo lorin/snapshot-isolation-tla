@@ -91,13 +91,14 @@ SetFate == /\ Done
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
-Issue == LET e == Head(h)
-             Toggle(f) == IF f = Flip THEN Flop ELSE Flip
-             t == e.tr
-             obj == e.arg[1]
-             val == e.arg[2] IN
-         /\ fateIsSet
+Issue(t, opp) == LET e == Head(h)
+                     Toggle(f) == IF f = Flip THEN Flop ELSE Flip
+                     obj == e.arg[1]
+                     val == e.arg[2] IN
          /\ h # <<>>
+         /\ t = e.tr
+         /\ opp = e.op
+         /\ fateIsSet
          /\ canIssue' = TRUE
          /\ h' = IF canIssue THEN Tail(h) ELSE h
          /\ h' # <<>>        
@@ -120,15 +121,17 @@ NextR == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ AbortWrR(t, obj, val)
             \/ CommitR(t)
             \/ AbortR(t)
+         \/ \E t \in Tr, opp \in {"r", "w", "c", "a"} :Issue(t, opp)
          \/ SetFate
-         \/ Issue       
          \/ TerminationR
 
 SpecR == InitR /\ [][NextR]_vv
 
 trBar == IF canIssue THEN Head(h).tr ELSE T0
 opBar == IF canIssue THEN Head(h).op ELSE "r"
-argBar == IF canIssue THEN Head(h).arg ELSE CHOOSE obj \in Obj : TRUE
+argBar == CASE canIssue /\ Head(h).arg = <<>> -> None
+            [] canIssue /\ Head(h).arg # <<>> -> Head(h).arg
+            [] OTHER -> CHOOSE obj \in Obj : TRUE
 rvalBar == IF canIssue THEN Head(h).rval ELSE V0
 tstateBar == [t \in TrR |->
                 LET s == Head(h).tstate[t] IN
