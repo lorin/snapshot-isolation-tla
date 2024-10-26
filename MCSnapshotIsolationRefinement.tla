@@ -1,0 +1,5 @@
+---- MODULE MCSnapshotIsolationRefinement ----
+EXTENDS SnapshotIsolationRefinement
+
+
+====
