@@ -52,8 +52,8 @@ Max(S) == CHOOSE x \in S : \A y \in S \ {x} : x >= y
 
 (* Latest committted transaction *)
 LCT == CHOOSE t \in Tr : /\ tstate[t] = Committed 
-                         /\ ~ \E tr: /\ tstate[tr]=Committed 
-                                     /\ tid[tr] > tid[t]
+                         /\ ~ \E tr \in Tr: /\ tstate[tr]=Committed 
+                                            /\ tid[tr] > tid[t]
 
 StartTransaction(t) == 
     LET tl == LCT
@@ -117,6 +117,7 @@ Commit(t) == /\ tstate[t] = Open
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
 v == <<op, arg, rval, tstate, tid, snap, env>>
+
 Termination == Done /\ UNCHANGED v
 
 Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
