@@ -1,5 +1,5 @@
 ---- MODULE SnapshotIsolationRefinement ----
-EXTENDS SnapshotIsolation, Naturals, Sequences, FiniteSets
+EXTENDS SnapshotIsolation, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS Pred, NULL, Flip, Flop, Undefined
 
@@ -93,19 +93,19 @@ SetFate == /\ Done
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
-Issue == LET e == Head(h)
-                     Toggle(f) == IF f = Flip THEN Flop ELSE Flip
-                     obj == e.arg[1]
-                     val == e.arg[2] 
-                       t == e.tr
-                     IN
-         /\ h # <<>>
+Issue == /\ h # <<>>
          /\ fateIsSet
          /\ canIssue' = TRUE
          /\ h' = IF canIssue THEN Tail(h) ELSE h
          /\ h' # <<>>        
-         /\ tenvBar' = IF tstate[e.tr] = Committed /\ e.op = "w" THEN [tenvBar EXCEPT ![t][obj]=val]
-                       ELSE tenvBar
+         (* tenvBar' needs to reflect the state of the *next* head in the history, not the current head *)
+         /\ tenvBar' = LET e == Head(h')
+                           obj == e.arg[1]
+                           val == e.arg[2] 
+                           t == e.tr 
+                       IN IF tstate[e.tr] = Committed /\ e.op = "w" 
+                          THEN [tenvBar EXCEPT ![t][obj]=val] 
+                          ELSE tenvBar
          /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, fateIsSet, parity, reads, writes, ord>>
 
 vv == <<op, arg, rval, tstate, tid, snap, env, anc, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>

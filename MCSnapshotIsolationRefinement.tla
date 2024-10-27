@@ -8,6 +8,7 @@ LimitHistory == Len(h) <= Hmax
 CTs == {t \in Tr \ {T0}: fateBar[t] = Committed}
 
 Alias == [
+    tstate |-> tstate,
     tstateBar |-> tstateBar,
     fateBar |-> fateBar,
     tenvBar |-> tenvBar,
@@ -20,7 +21,8 @@ Alias == [
     evalBar |-> evalBar,
     ffBar |-> ffBar,
     h |-> h,
-    parity |-> parity
+    parity |-> parity,
+    e |-> Head(h)
     (*
     Init |-> Ser!Init,
     Initialized |-> Ser!Initialized,
