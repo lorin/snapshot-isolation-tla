@@ -1,0 +1,2 @@
+# Snapshot isolation in TLA+
+
