@@ -87,7 +87,8 @@ SetFate == /\ Done
                 /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
                 /\ \A i \in 1..N : LET t == r.to[i] IN 
                     /\ \A obj \in reads[t] : r.benv[i][obj] = snap[t][obj] (* all non-written reads have to be consistent with transaction's snapshot *)
-                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = env[t][obj] (* all writes have to be conssitent with transaction's environment *)
+                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = env[t][obj] (* all writes have to be consistent with transaction's environment *)
+                    /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] (* if a variable changed, there must be a corresponding write*)
            /\ tenvBar' = LET ordp == ord'
                              benv == ordp.benv
                              to == ordp.to IN
