@@ -7,6 +7,7 @@ EXTENDS SerializabilityD
 
 VARIABLES fateP, toP, benvP, tenvP
 
+
 InitDR == LET CTs == {t \in Tr \ {T0}: fateP[t] = Committed} 
               OrdP(t) == CHOOSE i \in DOMAIN toP : toP[i] = t
           IN
@@ -32,19 +33,14 @@ vv == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, ff, fateP, toP, benvP, 
 
 SpecDR == InitDR /\ [][NextDR]_vv
 
-fateBar == IF fate = NULL THEN fateP ELSE fate
-toBar == IF to = NULL THEN toP ELSE fate
-tenvBar == IF tenv = NULL THEN tenvP ELSE tenv
-benvBar == IF benv = NULL THEN benvP ELSE benv
-
 Ser == INSTANCE Serializability WITH 
-    fate <- fateBar,
-    to <- toBar,
-    tenv <- tenvBar,
-    benv <- benvBar
+    fate <- IF fate = NULL THEN fateP ELSE fate,
+    to   <- IF to = NULL THEN toP ELSE to,
+    tenv <- IF tenv = NULL THEN tenvP ELSE tenv,
+    benv <- IF benv = NULL THEN benvP ELSE benv
 
-SerSpec == Ser!Init /\ [][Ser!Next]_vv
+SerSpec == Ser!Init /\ [][Ser!Next]_Ser!v 
 
-(* THEOREM SpecDR => SerSpec *)
+THEOREM SpecDR => SerSpec
 
 ====
