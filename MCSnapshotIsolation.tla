@@ -3,6 +3,12 @@ EXTENDS SnapshotIsolation
 
 Terminates == <> Done
 
+Alias == [
+    Deps |-> Deps,
+    TCD |-> TC(Deps),
+    stuck |-> {t \in Tr: <<t, t>> \in TC(Deps)}
+]
+
 
 (*************************************************)
 (* True if transaction *t* modified object *obj* *)

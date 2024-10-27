@@ -76,6 +76,9 @@ AbortR(t) == /\ Abort(t)
              /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, tstate|->[tstate EXCEPT ![t]=Aborted]])
              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
+DetectDeadlockR == /\ DetectDeadlock
+                   /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+
 (* Get the order in which this transactionruns *)
 Ord(t) == CHOOSE i \in DOMAIN ord.to : ord.to[i] = t
 
@@ -110,11 +113,12 @@ Issue == /\ h # <<>>
                           ELSE tenvBar
          /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, fateIsSet, parity, reads, writes, ord>>
 
-vv == <<op, arg, rval, tstate, tid, snap, env, anc, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+vv == <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>
                 /\ UNCHANGED vv
+
 
 NextR == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ StartTransactionR(t)
@@ -125,6 +129,7 @@ NextR == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ AbortWrR(t, obj, val)
             \/ CommitR(t)
             \/ AbortR(t)
+         \/ DetectDeadlockR
          \/ Issue
          \/ SetFate
          \/ TerminationR

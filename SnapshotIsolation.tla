@@ -124,7 +124,7 @@ Deps == {<<Ti, Tj>> \in Tr \X Tr :
 (************************************************************)
 DetectDeadlock == LET TCD == TC(Deps)
                       stuck == {t \in Tr: <<t, t>> \in TCD} IN 
-                  /\ ~ deadlocked \subseteq stuck
+                  /\ stuck \ deadlocked # {} (* something is stuck that hasn't previously been captured as deadlocked *)
                   /\ deadlocked' = deadlocked \union stuck
                   /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc>>
 
@@ -197,6 +197,7 @@ Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ AbortWr(t, obj, val)
             \/ Commit(t)
             \/ Abort(t)
+        \/ DetectDeadlock
         \/ Termination
 
 L == /\ WF_v(\E t \in Tr, obj \in Obj, val \in Val : 
