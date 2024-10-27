@@ -20,8 +20,9 @@ TypeOkR == /\ TypeOk
                 /\ e.arg \in CASE e.op = "r" -> Obj
                                [] e.op = "w" -> Obj \X Val
                                [] OTHER      -> { <<>> }
+
                 /\ e.rval \in Val \cup {Ok, Err}
-                /\ e.tstate \in [Tr -> {Open, Committed, Aborted}]
+                /\ e.tstate \in [Tr -> {Unstarted, Open, Committed, Aborted}]
                 /\ e.op \in {"r", "w"} => /\ DOMAIN e.wr \subseteq Obj 
                                           /\ \A obj \in DOMAIN e.wr : e.wr[obj] \in Val
            /\ fateIsSet \in BOOLEAN
