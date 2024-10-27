@@ -32,9 +32,18 @@ vv == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, ff, fateP, toP, benvP, 
 
 SpecDR == InitDR /\ [][NextDR]_vv
 
-Ser == INSTANCE Serializability WITH Tr <- Tr \ {T0}
+fateBar == IF fate = NULL THEN fateP ELSE fate
+toBar == IF to = NULL THEN toP ELSE fate
+tenvBar == IF tenv = NULL THEN tenvP ELSE tenv
+benvBar == IF benv = NULL THEN benvP ELSE benv
 
-SerSpec == Ser!Spec
+Ser == INSTANCE Serializability WITH 
+    fate <- fateBar,
+    to <- toBar,
+    tenv <- tenvBar,
+    benv <- benvBar
+
+SerSpec == Ser!Init /\ [][Ser!Next]_vv
 
 (* THEOREM SpecDR => SerSpec *)
 

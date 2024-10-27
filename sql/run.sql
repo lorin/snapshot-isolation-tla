@@ -3,6 +3,7 @@ create table obj (
     v int
 );
 
+--- For postgres
 ALTER DATABASE tla SET default_transaction_isolation TO 'repeatable read';
 
 insert into obj (k,v) values ('x', 0), ('y', 0);
