@@ -1,16 +1,10 @@
 ---- MODULE SerializabilityRefinement ----
 EXTENDS Serializability, Sequences, TLC
-(**
- * 1. Track the history
- * 2. When it's done, generate a proper sorted version of the history
- * 3. Do the mapping
- *)
 
 VARIABLES h, henv, opBar, argBar, rvalBar, envBar, ffBar, serialized
 
 vars == <<h, henv, opBar, argBar, rvalBar, envBar, ffBar, serialized>>
 bars == <<opBar, argBar, rvalBar, envBar, ffBar, serialized>>
-
 
 InitR == /\ Init
          /\ h = <<>>
@@ -21,7 +15,6 @@ InitR == /\ Init
          /\ envBar = benv[1]
          /\ ffBar = Flip
          /\ serialized = FALSE
-
 
 
 TypeOkR == /\ h \in Seq([tr: Tr, op: {"r","w"}, arg: Arg])

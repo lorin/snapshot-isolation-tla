@@ -18,7 +18,6 @@ Alias == [
     argBar |-> argBar,
     rvalBar |-> rvalBar,
     benvBar |-> ord.benv,
-    evalBar |-> evalBar,
     ffBar |-> ffBar,
     h |-> h
 

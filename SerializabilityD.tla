@@ -6,6 +6,8 @@ EXTENDS Serializability
 
 CONSTANT NULL
 
+ASSUME T0 \notin Tr
+
 Initialized == fate # NULL
 
 InitD == /\ tr = T0
@@ -19,9 +21,9 @@ InitD == /\ tr = T0
          /\ tenv = NULL
          /\ ff \in {Flip, Flop}
 
-Predict == LET CTs == {t \in Tr \ {T0}: fate'[t] = Committed} IN
+Predict == LET CTs == {t \in Tr : fate'[t] = Committed} IN
            /\ ~Initialized
-           /\ fate' \in [Tr \ {T0} -> {Committed, Aborted}]
+           /\ fate' \in [Tr -> {Committed, Aborted}]
            /\ to' \in Orderings(CTs)
            /\ benv' \in [1..Cardinality(CTs)+1 -> [Obj -> Val]]
            /\ tenv' \in {f \in [CTs -> [Obj -> Val]] : \A t \in CTs: f[t] = benv'[Ord(t)']}

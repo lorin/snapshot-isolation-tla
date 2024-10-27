@@ -5,6 +5,15 @@ VARIABLES h
 
 CONSTANTS Hmax
 
+TypeOk == /\ op \in {"r", "w"}
+          /\ arg \in Obj \cup Obj \X Val
+          /\ rval \in Val \cup {Ok} \cup SUBSET Obj
+          /\ env \in [Obj -> Val]
+          /\ ff \in {Flip, Flop}
+
+TypeOkH == /\ TypeOk 
+           /\ h \in Seq([op: {"r", "w"}, obj: Obj, val: Val])
+
 InitH == /\ Init
          /\ h = <<>>
 

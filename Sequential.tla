@@ -6,23 +6,15 @@
 CONSTANTS Obj, Val, Ok, Flip, Flop
 
 VARIABLES 
-    (******************************)
-    (* external visible variables *)
-    (******************************)
+    (********************************)
+    (* externally visible variables *)
+    (********************************)
     op, arg, rval,
     
     (**********************)
     (* internal variables *)
     (**********************)
     env, ff
-
-
-TypeOk == /\ op \in {"r", "w"}
-          /\ arg \in Obj \cup Obj \X Val
-          /\ rval \in Val \cup {Ok} \cup SUBSET Obj
-          /\ env \in [Obj -> Val]
-          /\ ff \in {Flip, Flop}
-
 
 Toggle(f) == CASE ff = Flip -> Flop
                [] ff = Flop -> Flip
