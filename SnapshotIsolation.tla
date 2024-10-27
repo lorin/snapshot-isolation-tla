@@ -206,6 +206,7 @@ L == /\ WF_v(\E t \in Tr, obj \in Obj, val \in Val :
                 \/ AbortWr(t, obj, val))
      /\ WF_v(\E t \in Tr: \/ StartTransaction(t))
      /\ SF_v(\E t \in Tr: Commit(t) \/ Abort(t))
+     /\ WF_v(DetectDeadlock)
 
 Spec == Init /\ [][Next]_v /\ L
 
