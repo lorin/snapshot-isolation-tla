@@ -46,7 +46,7 @@ N == Cardinality(CT)
 Orderings(S) == {seq \in [1..Cardinality(S) -> S] : \A i,j \in DOMAIN seq : seq[i] = seq[j] => i = j}
 
 Op == {"r", "w", "c", "a"}
-Arg == Obj \union (Obj \X Val) \union Pred \union {None}
+Arg == Obj \union (Obj \X Val) \union {None}
 Rval == Val \union {Ok} \union SUBSET Obj
 
 TypeOk == /\ tr \in Tr \union {T0}
