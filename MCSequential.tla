@@ -52,9 +52,9 @@ SuccessiveReads == LET obj == arg
                        val == rval
                        IsRd(k, o) == h[k].op = "r" /\ h[k].obj = o
                        IsWr(k, o) == h[k].op = "w" /\ h[k].obj = o 
-                       NoWrRd(i, o) ==  IsRd(i, o) /\ ~ \E j \in i+1..Len(h-1) : IsWr(j, o) IN
-                    /\ op = "r" 
-                    /\ (\E i \in 1..Len(h)-1 : NoWrRd(i, obj)) => rval = h[CHOOSE i \in 1..Len(h)-1 : NoWrRd(i, obj)]
+                       NoWrRd(i, o) ==  IsRd(i, o) /\ ~ \E j \in i+1..Len(h)-1 : IsWr(j, o) 
+                       j == CHOOSE j \in 1..Len(h)-1 : NoWrRd(j, obj) IN
+                    (op = "r" /\ \E i \in 1..Len(h)-1 : NoWrRd(i, obj)) => rval = h[j].val
 
 
 Symmetry == Permutations(Obj) \cup Permutations(Val)
