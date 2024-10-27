@@ -93,13 +93,13 @@ SetFate == /\ Done
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
            /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
 
-Issue(t, opp) == LET e == Head(h)
+Issue == LET e == Head(h)
                      Toggle(f) == IF f = Flip THEN Flop ELSE Flip
                      obj == e.arg[1]
-                     val == e.arg[2] IN
+                     val == e.arg[2] 
+                       t == e.tr
+                     IN
          /\ h # <<>>
-         /\ t = e.tr
-         /\ opp = e.op
          /\ fateIsSet
          /\ canIssue' = TRUE
          /\ h' = IF canIssue THEN Tail(h) ELSE h
@@ -123,7 +123,7 @@ NextR == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ AbortWrR(t, obj, val)
             \/ CommitR(t)
             \/ AbortR(t)
-         \/ \E t \in Tr, opp \in {"r", "w", "c", "a"} :Issue(t, opp)
+         \/ Issue
          \/ SetFate
          \/ TerminationR
 
