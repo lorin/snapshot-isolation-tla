@@ -24,7 +24,7 @@ InitR == /\ Init
 
 
 
-TypeOkR == /\ h \in Seq([tr: Tr, op: {"r","w","p"}, arg: Arg])
+TypeOkR == /\ h \in Seq([tr: Tr, op: {"r","w"}, arg: Arg])
            /\ henv \in Seq([Obj -> Val])
            /\ opBar \in Op
            /\ argBar \in Arg

@@ -45,7 +45,7 @@ N == Cardinality(CT)
 (* Generate all permuted sequences of the set S *)
 Orderings(S) == {seq \in [1..Cardinality(S) -> S] : \A i,j \in DOMAIN seq : seq[i] = seq[j] => i = j}
 
-Op == {"r", "w", "p", "c", "a"}
+Op == {"r", "w", "c", "a"}
 Arg == Obj \union (Obj \X Val) \union Pred \union {None}
 Rval == Val \union {Ok} \union SUBSET Obj
 

@@ -1,7 +1,7 @@
 ---- MODULE SnapshotIsolationRefinement ----
 EXTENDS SnapshotIsolation, Naturals, Sequences, FiniteSets, TLC
 
-CONSTANTS Pred, NULL, Flip, Flop, Undefined
+CONSTANTS NULL, Flip, Flop, Undefined
 
 VARIABLES h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar
 
