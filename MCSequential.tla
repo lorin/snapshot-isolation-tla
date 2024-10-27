@@ -1,0 +1,60 @@
+---- MODULE MCSequential ----
+EXTENDS Sequential, Sequences, Naturals
+
+VARIABLES h
+
+InitH == /\ Init
+         /\ h = <<>>
+
+ReadH(obj, val) == /\ Read(obj, val)
+                   /\ h' = Append(h, [op|->"r", obj|->obj, val|->val])
+
+WriteH(obj, val) == /\ Write(obj, val)
+                    /\ h' = Append(h, [op|->"w", obj|->obj, val|->val])
+
+
+NextH == \/ \E obj \in Obj, val \in Val: ReadH(obj, val) \/ WriteH(obj, val)
+
+vh == <<op, arg, rval, env, eval, ff, h>>
+SpecH == InitH /\ [][NextH]_vh
+
+(******************************)
+(* The set of writes to *obj* *)
+(******************************)
+Wr(obj) == LET evt == {i \in DOMAIN h : h[i]} IN 
+    {e \in evt : e.op="w" /\ e.obj=obj}
+
+(**************************************)
+(* Most recent value written to *obj* *)
+(**************************************)
+MRW(obj) == LET i == CHOOSE i \in DOMAIN h : 
+    /\ h[i].op = "w" 
+    /\ h[i].obj = obj
+    /\ ~ \E j \in DOMAIN h : /\ h[j].op = "w"
+                             /\ h[j].obj = obj
+                             /\ j > i IN
+    h[i].val
+
+(********************************************************************************************)
+(* If an object was previously written, the read should correspond to the most recent write *)
+(********************************************************************************************)
+ReadLastWrite == op = "r" => 
+        LET obj == arg
+            val == rval IN 
+         Wr(obj) # {} => MRW(obj) = val
+
+(****************************************************************************)
+(* Successive reads without intervening writes should return the same value *)
+(****************************************************************************)
+SuccessiveReads == LET obj == arg 
+                       val == rval
+                       IsRd(k, o) == h[k].op = "r" /\ h[k].obj = o
+                       IsWr(k, o) == h[k].op = "w" /\ h[k].obj = o IN 
+                       NoWrRd(i, obj) ==  IsRd(i, obj) /\ ~ \E j \in i+1..Len(h-1) : IsWr(j, obj)
+                    /\ op = "r" 
+                    /\ \E i \in 1..Len(h)-1 : NoWrRd(i, obj) => rval = h[CHOOSE i \in 1..Len(h)-1 : NoWrRd(i, obj)]
+                                                                            
+
+
+
+====

@@ -89,6 +89,7 @@ BeginRd(t, obj) == /\ tstate[t] = Open
 
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
+                      /\ arg[t] = obj
                       /\ val = env[t][obj]
                       /\ rval' = [rval EXCEPT ![t]=val]
                       /\ UNCHANGED <<op, arg, tstate, tid, snap, env, anc, deadlocked>>

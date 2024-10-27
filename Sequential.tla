@@ -1,5 +1,7 @@
 ---- MODULE Sequential ----
+(**********************)
 (* A sequential store *)
+(**********************)
 
 CONSTANTS Obj, Val, Pred,
           Ok,
