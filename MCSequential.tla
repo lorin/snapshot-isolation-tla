@@ -15,13 +15,13 @@ WriteH(obj, val) == /\ Write(obj, val)
 
 NextH == \/ \E obj \in Obj, val \in Val: ReadH(obj, val) \/ WriteH(obj, val)
 
-vh == <<op, arg, rval, env, eval, ff, h>>
+vh == <<op, arg, rval, env, ff, h>>
 SpecH == InitH /\ [][NextH]_vh
 
 (******************************)
 (* The set of writes to *obj* *)
 (******************************)
-Wr(obj) == LET evt == {i \in DOMAIN h : h[i]} IN 
+Wr(obj) == LET evt == {h[i] : i \in DOMAIN h} IN 
     {e \in evt : e.op="w" /\ e.obj=obj}
 
 (**************************************)
@@ -49,12 +49,10 @@ ReadLastWrite == op = "r" =>
 SuccessiveReads == LET obj == arg 
                        val == rval
                        IsRd(k, o) == h[k].op = "r" /\ h[k].obj = o
-                       IsWr(k, o) == h[k].op = "w" /\ h[k].obj = o IN 
-                       NoWrRd(i, obj) ==  IsRd(i, obj) /\ ~ \E j \in i+1..Len(h-1) : IsWr(j, obj)
+                       IsWr(k, o) == h[k].op = "w" /\ h[k].obj = o 
+                       NoWrRd(i, o) ==  IsRd(i, o) /\ ~ \E j \in i+1..Len(h-1) : IsWr(j, o) IN
                     /\ op = "r" 
-                    /\ \E i \in 1..Len(h)-1 : NoWrRd(i, obj) => rval = h[CHOOSE i \in 1..Len(h)-1 : NoWrRd(i, obj)]
-                                                                            
-
+                    /\ (\E i \in 1..Len(h)-1 : NoWrRd(i, obj)) => rval = h[CHOOSE i \in 1..Len(h)-1 : NoWrRd(i, obj)]
 
 
 ====

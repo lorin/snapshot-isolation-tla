@@ -37,12 +37,16 @@ VARIABLES
 
 v == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, ff>>
 
+(**************************)
 (* committed transactions *)
+(**************************)
 CT == {t \in Tr: fate[t] = Committed}
 
 N == Cardinality(CT)
 
+(************************************************)
 (* Generate all permuted sequences of the set S *)
+(************************************************)
 Orderings(S) == {seq \in [1..Cardinality(S) -> S] : \A i,j \in DOMAIN seq : seq[i] = seq[j] => i = j}
 
 Op == {"r", "w", "c", "a"}
@@ -61,7 +65,9 @@ TypeOk == /\ tr \in Tr \union {T0}
           /\ ff \in {Flip, Flop}
 
 
+(**************************************************************)
 (* the ordinal value (e.g., 1,2,3) of a committed transaction *)
+(**************************************************************)
 Ord(t) == CHOOSE i \in DOMAIN to : to[i] = t
 
 
