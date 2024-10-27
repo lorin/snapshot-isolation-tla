@@ -21,11 +21,18 @@ Alias == [
     evalBar |-> evalBar,
     ffBar |-> ffBar,
     h |-> h,
+    Initialized |-> Ser!Initialized,
+
+    tstateEqOpen |-> tstateBar[trBar] = Open,
+    fateTCommitted |-> tstateBar[trBar] = Committed,
+    tenvTrBar |-> tenvBar[trBar],
+    trStart |-> ord.benv[Ord(trBar)],
+    trEnd |-> ord.benv[Ord(trBar)+1]
+
+    (*
     parity |-> parity,
     e |-> Head(h)
-    (*
     Init |-> Ser!Init,
-    Initialized |-> Ser!Initialized,
     Pfate |-> fateBar \in [Tr \ {T0} -> {Committed, Aborted}],
     Pto |-> ord.to \in Ser!Orderings(CTs),
     Pbenv |-> ord.benv \in [1..Cardinality(CTs)+1 -> [Obj -> Val]],

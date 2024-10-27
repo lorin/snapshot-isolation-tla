@@ -1,5 +1,5 @@
 ---- MODULE Serializability ----
-EXTENDS Naturals, Sequences, FiniteSets
+EXTENDS Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS Tr, Obj, Pred, Val,
           Undefined, 
