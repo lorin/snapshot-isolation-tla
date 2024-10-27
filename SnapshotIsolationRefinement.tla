@@ -136,7 +136,9 @@ opBar == IF canIssue THEN Head(h).op ELSE "r"
 argBar == CASE canIssue /\ Head(h).arg = <<>> -> None
             [] canIssue /\ Head(h).arg # <<>> -> Head(h).arg
             [] OTHER -> CHOOSE obj \in Obj : TRUE
-rvalBar == IF canIssue THEN Head(h).rval ELSE V0
+rvalBar == CASE canIssue /\ Head(h).rval # Err -> Head(h).rval
+             [] canIssue /\ Head(h).rval = Err -> Ok
+             [] OTHER                          -> V0
 tstateBar == [t \in TrR |->
                 LET s == Head(h).tstate[t] IN
                 CASE ~canIssue                 -> Open

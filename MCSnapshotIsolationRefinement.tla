@@ -20,7 +20,9 @@ Alias == [
     benvBar |-> ord.benv,
     evalBar |-> evalBar,
     ffBar |-> ffBar,
-    h |-> h,
+    h |-> h
+
+    (*
     Initialized |-> Ser!Initialized,
 
     tstateEqOpen |-> tstateBar[trBar] = Open,
@@ -29,7 +31,6 @@ Alias == [
     trStart |-> ord.benv[Ord(trBar)],
     trEnd |-> ord.benv[Ord(trBar)+1]
 
-    (*
     parity |-> parity,
     e |-> Head(h)
     Init |-> Ser!Init,
