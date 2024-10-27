@@ -1,6 +1,6 @@
 ---- MODULE SnapshotIsolation ----
 
-EXTENDS Naturals
+EXTENDS Naturals, TransitiveClosure
 
 CONSTANTS Tr, Obj, Val, T0, V0,
           Unstarted, Open, Committed, Aborted,
@@ -24,10 +24,11 @@ VARIABLES
     (**********************)
     (* internal variables *)
     (**********************)
-    tstate,    (* state of each transaction *)
-    tid,       (* timestamp of each transaction *)
-    snap,      (* database snapshot used by each transaction *)
-    env,       (* environment of each transaction *)
+    tstate,     (* state of each transaction *)
+    tid,        (* timestamp of each transaction *)
+    snap,       (* database snapshot used by each transaction *)
+    env,        (* environment of each transaction *)
+    deadlocked, (* transactions that have deadlocked *)
 
     (**********************)
     (* history variables  *)
@@ -44,6 +45,7 @@ TypeOk == /\ op \in [Tr -> {"-", "s", "r", "w", "c", "a"}]
           /\ tstate \in [Tr -> {Unstarted, Open, Committed, Aborted}]
           /\ snap \in [Tr -> [Obj -> Val]]
           /\ env \in [Tr -> [Obj -> Val]]
+          /\ deadlocked \in Tr
 
 Init == /\ op = [t \in Tr |-> "-"]
         /\ arg = [t \in Tr |-> <<>>]
@@ -52,7 +54,8 @@ Init == /\ op = [t \in Tr |-> "-"]
         /\ tstate = [t \in Tr |-> IF t=T0 THEN Committed ELSE Unstarted]
         /\ snap = [t \in Tr |-> SnapInit]
         /\ env = [t \in Tr |-> SnapInit]
-        /\ anc       = [t \in Tr |-> {}]
+        /\ anc = [t \in Tr |-> {}]
+        /\ deadlocked = {}
 
 (* Maximum value of a set *)
 Max(S) == CHOOSE x \in S : \A y \in S \ {x} : x >= y
@@ -75,32 +78,56 @@ StartTransaction(t) ==
     /\ snap' = [snap EXCEPT ![t]=env[tl]]
     /\ env' = [env EXCEPT ![t]=env[tl]]
     /\ anc' = [anc EXCEPT ![t]={tl} \union anc[tl]]
+    /\ UNCHANGED deadlocked
 
 BeginRd(t, obj) == /\ tstate[t] = Open
                    /\ rval[t] # Busy
                    /\ op' = [op EXCEPT ![t]="r"]
                    /\ arg' = [arg EXCEPT ![t]=obj]
                    /\ rval' = [rval EXCEPT ![t]=Busy]
-                   /\ UNCHANGED  <<tstate, tid, snap, env, anc>>
+                   /\ UNCHANGED  <<tstate, tid, snap, env, anc, deadlocked>>
 
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
                       /\ val = env[t][obj]
                       /\ rval' = [rval EXCEPT ![t]=val]
-                      /\ UNCHANGED <<op, arg, tstate, tid, snap, env, anc>>
+                      /\ UNCHANGED <<op, arg, tstate, tid, snap, env, anc, deadlocked>>
 
 BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ rval[t] # Busy
                         /\ op' = [op EXCEPT ![t]="w"]
                         /\ arg' = [arg EXCEPT ![t] = <<obj, val>>]
                         /\ rval' = [rval EXCEPT ![t]=Busy]
-                        /\ UNCHANGED  <<tstate, tid, snap, env, anc>>
+                        /\ UNCHANGED  <<tstate, tid, snap, env, anc, deadlocked>>
 
 (*******************************************************************)
 (* True if transaction *t* is active and has modified object *obj* *)
 (*******************************************************************)
 ActiveWrite(t, obj) == /\ tstate[t] = Open
                        /\ env[t][obj] # snap[t][obj]
+
+
+(*************************************)
+(* Dependencies due to active writes *)
+(*************************************)
+Deps == {<<Ti, Tj>> \in Tr \X Tr :
+            /\ Ti # Tj
+            /\ tstate[Ti] = Open
+            /\ op[Ti] = "w"
+            /\ rval[Ti] = Busy
+            /\ \E obj \in Obj: arg[Ti][1] = obj /\ ActiveWrite(Tj, obj) }
+
+
+(************************************************************)
+(* Detect if deadlock is currently occurring.               *)
+(* This only fires if there are as-yet-undetected deadlocks *)
+(************************************************************)
+DetectDeadlock == LET TCD == TC(Deps)
+                      stuck == {t \in Tr: <<t, t>> \in TCD} IN 
+                  /\ ~ deadlocked \subseteq stuck
+                  /\ deadlocked' = deadlocked \union stuck
+                  /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc>>
+
 
 (***********************************************************************)
 (* True if transaction *t* is committed and has modified object *obj* *)
@@ -126,17 +153,18 @@ EndWr(t, obj, val) == /\ op[t] = "w"
                       /\ ~ WriteConflict(t, obj)
                       /\ env' = [env EXCEPT ![t][obj]=val]
                       /\ rval' = [rval EXCEPT ![t]=Ok]
-                      /\ UNCHANGED  <<op, arg, tstate, tid, snap, anc>>
+                      /\ UNCHANGED  <<op, arg, tstate, tid, snap, anc, deadlocked>>
 
 
 AbortWr(t, obj, val) == /\ op[t] = "w"
                         /\ rval[t] = Busy
-                        /\ WriteConflict(t, obj)
+                        /\ \/ WriteConflict(t, obj)
+                           \/ t \in deadlocked
                         /\ op' = [op EXCEPT ![t] = "a"]
                         /\ arg' = [arg EXCEPT ![t] = <<>>]
                         /\ rval' = [rval EXCEPT ![t]=Err]
                         /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-                      /\ UNCHANGED  <<tid, snap, anc, env>>
+                      /\ UNCHANGED  <<tid, snap, anc, env, deadlocked>>
 
 Abort(t) == /\ tstate[t] = Open
             /\ rval[t] # Busy
@@ -144,7 +172,7 @@ Abort(t) == /\ tstate[t] = Open
             /\ arg' = [arg EXCEPT ![t] = <<>>]
             /\ rval' = [rval EXCEPT ![t]=Ok]
             /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-            /\ UNCHANGED <<tid, snap, env, anc>>
+            /\ UNCHANGED <<tid, snap, env, anc, deadlocked>>
 
 Commit(t) == /\ tstate[t] = Open
              /\ rval[t] # Busy
@@ -153,10 +181,10 @@ Commit(t) == /\ tstate[t] = Open
              /\ arg' = [arg EXCEPT ![t] = <<>>]
              /\ rval' = [rval EXCEPT ![t]=Ok]
              /\ tstate' = [tstate EXCEPT ![t] = Committed]
-             /\ UNCHANGED <<tid, snap, env, anc>>
+             /\ UNCHANGED <<tid, snap, env, anc, deadlocked>>
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
-v == <<op, arg, rval, tstate, tid, snap, env, anc>>
+v == <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked>>
 
 Termination == Done /\ UNCHANGED v
 
