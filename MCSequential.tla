@@ -1,7 +1,9 @@
 ---- MODULE MCSequential ----
-EXTENDS Sequential, Sequences, Naturals
+EXTENDS Sequential, Sequences, Naturals, TLC
 
 VARIABLES h
+
+CONSTANTS Hmax
 
 InitH == /\ Init
          /\ h = <<>>
@@ -54,5 +56,9 @@ SuccessiveReads == LET obj == arg
                     /\ op = "r" 
                     /\ (\E i \in 1..Len(h)-1 : NoWrRd(i, obj)) => rval = h[CHOOSE i \in 1..Len(h)-1 : NoWrRd(i, obj)]
 
+
+Symmetry == Permutations(Obj) \cup Permutations(Val)
+
+MaxHistory == Len(h) <= Hmax
 
 ====
