@@ -165,9 +165,6 @@ ffBar == LET Parity(hh) == Len(SelectSeq(hh, LAMBDA e: e.op \in {"r", "w"})) % 2
 fateBar == IF ~fateIsSet THEN NULL
            ELSE [t \in TrR |-> tstate[t]]
 
-(* We don't implement predicate reads, so we choose just an arbitrary evaluation *)
-evalBar == CHOOSE x \in [Pred -> [[Obj -> Val] -> SUBSET Obj]] : TRUE
-
 Ser == INSTANCE SerializabilityD WITH
     Tr <- TrR,
     tr <- trBar,
@@ -179,7 +176,6 @@ Ser == INSTANCE SerializabilityD WITH
     to <- ord.to,
     tenv <- tenvBar,
     benv <- ord.benv,
-    eval <- evalBar,
     ff <- ffBar,
     Vinit <- V0
 

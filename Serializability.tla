@@ -1,7 +1,7 @@
 ---- MODULE Serializability ----
 EXTENDS Naturals, Sequences, FiniteSets, TLC
 
-CONSTANTS Tr, Obj, Pred, Val,
+CONSTANTS Tr, Obj, Val,
           Undefined, 
           Open, Committed, Aborted,
           Ok,
@@ -16,7 +16,7 @@ CONSTANTS Tr, Obj, Pred, Val,
 
 VARIABLES 
           (********************************)
-          (* external variables           *)
+          (* externally visible variables *)
           (********************************)
           tr,   (* transaction *)
           op,   (* operation *)
@@ -33,10 +33,9 @@ VARIABLES
                     the commit order of committed transactions *)
           tenv,   (* value of variables for each transaction *)
           benv,   (* sequence: beginning state of the i'th transaction *)
-          eval,   (* predicate evlauation *)
           ff      (* flip/flop *)
 
-v == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, eval, ff>>
+v == <<tr, op, arg, rval, tstate, fate, to, tenv, benv, ff>>
 
 (* committed transactions *)
 CT == {t \in Tr: fate[t] = Committed}
@@ -59,7 +58,6 @@ TypeOk == /\ tr \in Tr \union {T0}
           /\ to \in Orderings(CT)
           /\ benv \in [1..N+1 -> [Obj -> Val]]
           /\ tenv \in [CT -> [Obj -> Val]]
-          /\ eval \in [Pred -> [[Obj -> Val] -> SUBSET Obj]]
           /\ ff \in {Flip, Flop}
 
 
@@ -79,7 +77,6 @@ Init == /\ tr = T0
         /\ to \in Orderings(CT)
         /\ benv \in [1..N+1 -> [Obj -> Val]]
         /\ tenv \in {f \in [CT -> [Obj -> Val]] : \A t \in CT: f[t] = benv[Ord(t)]}
-        /\ eval \in [Pred -> [[Obj -> Val] -> SUBSET Obj]]
         /\ ff \in {Flip, Flop}
 
 
@@ -91,17 +88,7 @@ Read(t, obj, val) == /\ tstate[t] = Open
                      /\ arg' = obj
                      /\ rval' = val
                      /\ ff' = Toggle(ff)
-                     /\ UNCHANGED <<tstate, fate, to, tenv, benv, eval>>
-
-
-PredRead(t, P) == /\ tstate[t] = Open
-                  /\ tr' = t
-                  /\ op' = "p"
-                  /\ arg' = P
-                  /\ rval' \in Obj
-                  /\ fate[t] = Committed => rval' = eval[P][tenv[t]]
-                  /\ ff' = Toggle(ff)
-                  /\ UNCHANGED <<tstate, fate, to, tenv, benv, eval>>
+                     /\ UNCHANGED <<tstate, fate, to, tenv, benv>>
 
 Write(t, obj, val) == /\ tstate[t] = Open
                       /\ tr' = t
@@ -110,7 +97,7 @@ Write(t, obj, val) == /\ tstate[t] = Open
                       /\ rval' = Ok
                       /\ tenv' = IF fate[t] = Committed THEN [tenv EXCEPT ![t] = [@ EXCEPT ![obj]=val]] ELSE tenv
                       /\ ff' = Toggle(ff)
-                      /\ UNCHANGED <<tstate, fate, to, benv, eval>>
+                      /\ UNCHANGED <<tstate, fate, to, benv>>
 
 Abort(t) == /\ tstate[t] = Open
             /\ fate[t] = Aborted
@@ -119,7 +106,7 @@ Abort(t) == /\ tstate[t] = Open
             /\ arg' = None
             /\ rval' = Ok
             /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-            /\ UNCHANGED <<fate, to, tenv, benv, eval, ff>>
+            /\ UNCHANGED <<fate, to, tenv, benv, ff>>
 
 Commit(t) == /\ tstate[t] = Open
              /\ fate[t] = Committed
@@ -129,7 +116,7 @@ Commit(t) == /\ tstate[t] = Open
              /\ arg' = None
              /\ rval' = Ok
              /\ tstate' = [tstate EXCEPT ![t]=Committed]
-             /\ UNCHANGED <<fate, to, tenv, benv, eval, ff>>
+             /\ UNCHANGED <<fate, to, tenv, benv, ff>>
 
 (*******************************************************************************************)
 (* Number of variables with the same values in environments e1 and e2                      *)
@@ -159,7 +146,6 @@ Next == \/ \E t \in Tr:
             \/ \E obj \in Obj, val \in Val:
                 \/ Read(t, obj, val)
                 \/ Write(t, obj, val)
-            \/ \E P \in Pred: PredRead(t, P)
         \/ Termination
 
 L == /\ SF_v(\E t \in Tr: Commit(t))

@@ -1,5 +1,7 @@
 ---- MODULE SerializabilityD ----
+(*********************************************************************)
 (* Delay the Serializability spec by one state to support refinement *)
+(*********************************************************************)
 EXTENDS Serializability
 
 CONSTANT NULL
@@ -15,18 +17,15 @@ InitD == /\ tr = T0
          /\ to = NULL
          /\ benv = NULL
          /\ tenv = NULL
-         /\ eval \in [Pred -> [[Obj -> Val] -> SUBSET Obj]]
          /\ ff \in {Flip, Flop}
 
-
- 
 Predict == LET CTs == {t \in Tr \ {T0}: fate'[t] = Committed} IN
            /\ ~Initialized
            /\ fate' \in [Tr \ {T0} -> {Committed, Aborted}]
            /\ to' \in Orderings(CTs)
            /\ benv' \in [1..Cardinality(CTs)+1 -> [Obj -> Val]]
            /\ tenv' \in {f \in [CTs -> [Obj -> Val]] : \A t \in CTs: f[t] = benv'[Ord(t)']}
-           /\ UNCHANGED <<tr, op, arg, rval, tstate, eval, ff>>
+           /\ UNCHANGED <<tr, op, arg, rval, tstate, ff>>
 
 NextD == \/ Predict
          \/ (Initialized /\ Next)

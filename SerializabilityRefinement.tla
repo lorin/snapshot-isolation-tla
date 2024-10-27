@@ -48,11 +48,6 @@ WriteR(t, obj, val) == /\ Write(t, obj, val)
                        /\ henv' = IF Commits(t) THEN Append(henv, tenv'[t]) ELSE henv
                        /\ UNCHANGED bars
 
-PredReadR(t, P) == /\ PredRead(t, P)
-                   /\ h' = IF Commits(t) THEN Append(h, [tr|->t, op|->"p", arg|->arg', rval|->rval']) ELSE h
-                   /\ henv' = IF Commits(t) THEN Append(henv, tenv'[t]) ELSE henv
-                   /\ UNCHANGED bars
-
 SerializeHistory == 
     /\ Termination
     /\ ~serialized
@@ -106,7 +101,6 @@ NextR == \/ \E t \in Tr:
             \/ \E obj \in Obj, val \in Val:
                 \/ ReadR(t, obj, val)
                 \/ WriteR(t, obj, val)
-            \/ \E P \in Pred: PredReadR(t, P)
         \/ SerializeHistory
         \/ Issue
         \/ TerminationR
@@ -122,7 +116,6 @@ Sequential == INSTANCE Sequential WITH
     arg <- argBar,
     rval <- rvalBar,
     env <- envBar,
-    eval <- eval, (* this doesn't change *)
     ff <- ffBar
 
 SeqSpec == Sequential!Spec
