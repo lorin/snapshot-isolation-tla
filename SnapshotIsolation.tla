@@ -45,7 +45,7 @@ TypeOk == /\ op \in [Tr -> {"-", "s", "r", "w", "c", "a"}]
           /\ tstate \in [Tr -> {Unstarted, Open, Committed, Aborted}]
           /\ snap \in [Tr -> [Obj -> Val]]
           /\ env \in [Tr -> [Obj -> Val]]
-          /\ deadlocked \in Tr
+          /\ deadlocked \subseteq Tr
 
 Init == /\ op = [t \in Tr |-> "-"]
         /\ arg = [t \in Tr |-> <<>>]

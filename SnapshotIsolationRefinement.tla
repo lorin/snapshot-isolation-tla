@@ -25,6 +25,7 @@ TypeOkR == /\ TypeOk
                 /\ e.tstate \in [Tr -> {Unstarted, Open, Committed, Aborted}]
                 /\ e.op \in {"r", "w"} => /\ DOMAIN e.wr \subseteq Obj 
                                           /\ \A obj \in DOMAIN e.wr : e.wr[obj] \in Val
+
            /\ fateIsSet \in BOOLEAN
            /\ canIssue \in BOOLEAN
            /\ parity \in {0,1}
@@ -96,7 +97,7 @@ SetFate == /\ Done
                              benv == ordp.benv
                              to == ordp.to IN
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
-           /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, h, canIssue, parity, reads, writes>>
+           /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, h, canIssue, parity, reads, writes>>
 
 Issue == /\ h # <<>>
          /\ fateIsSet
@@ -111,7 +112,7 @@ Issue == /\ h # <<>>
                        IN IF tstate[e.tr] = Committed /\ e.op = "w" 
                           THEN [tenvBar EXCEPT ![t][obj]=val] 
                           ELSE tenvBar
-         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, fateIsSet, parity, reads, writes, ord>>
+         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, fateIsSet, parity, reads, writes, ord>>
 
 vv == <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
