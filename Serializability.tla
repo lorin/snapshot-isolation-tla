@@ -2,7 +2,6 @@
 EXTENDS Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS Tr, Obj, Val,
-          Undefined, 
           Open, Committed, Aborted,
           Ok,
           Flip, Flop,
@@ -48,22 +47,6 @@ N == Cardinality(CT)
 (* Generate all permuted sequences of the set S *)
 (************************************************)
 Orderings(S) == {seq \in [1..Cardinality(S) -> S] : \A i,j \in DOMAIN seq : seq[i] = seq[j] => i = j}
-
-Op == {"r", "w", "c", "a"}
-Arg == Obj \union (Obj \X Val) \union {None}
-Rval == Val \union {Ok} \union SUBSET Obj
-
-TypeOk == /\ tr \in Tr \union {T0}
-          /\ op \in Op
-          /\ arg \in Arg 
-          /\ rval \in Rval
-          /\ tstate \in [Tr -> {Open, Committed, Aborted}]
-          /\ fate \in [Tr -> {Committed, Aborted}]
-          /\ to \in Orderings(CT)
-          /\ benv \in [1..N+1 -> [Obj -> Val]]
-          /\ tenv \in [CT -> [Obj -> Val]]
-          /\ ff \in {Flip, Flop}
-
 
 (**************************************************************)
 (* the ordinal value (e.g., 1,2,3) of a committed transaction *)
