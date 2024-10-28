@@ -16,4 +16,7 @@ TypeOk == /\ tr \in Tr \union {T0}
           /\ tenv \in [CT -> [Obj -> Val]]
           /\ ff \in {Flip, Flop}
 
+
+Terminates == <> \A t \in Tr: tstate[t] \in {Committed, Aborted}
+
 ====

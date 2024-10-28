@@ -88,15 +88,6 @@ Write(t, obj, val) == /\ tstate[t] = Open
                       /\ ff' = Toggle(ff)
                       /\ UNCHANGED <<tstate, fate, to, benv>>
 
-Abort(t) == /\ tstate[t] = Open
-            /\ fate[t] = Aborted
-            /\ tr' = t
-            /\ op' = "a"
-            /\ arg' = None
-            /\ rval' = Ok
-            /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-            /\ UNCHANGED <<fate, to, tenv, benv, ff>>
-
 Commit(t) == /\ tstate[t] = Open
              /\ fate[t] = Committed
              /\ tenv[t] = benv[Ord(t)+1]
@@ -107,24 +98,14 @@ Commit(t) == /\ tstate[t] = Open
              /\ tstate' = [tstate EXCEPT ![t]=Committed]
              /\ UNCHANGED <<fate, to, tenv, benv, ff>>
 
-(*******************************************************************************************)
-(* Number of variables with the same values in environments e1 and e2                      *)
-(*                                                                                         *)
-(* A helper function for use in fairness properties.                                       *)
-(*******************************************************************************************)
-M(e1, e2) == Cardinality({obj \in Obj : e1[obj]=e2[obj]})
-
-(*******************************************************************************************)
-(* W(j,k) is true if there's a transaction t doing a write where:                          *)
-(*  1. the number of variables in the 1st state that are equal to the expected values is j *)
-(*  2. the number of variables in the 2nd state that are equal to the expected values is k *)
-(*                                                                                         *)
-(* A helper function for use in fairness properties.                                       *)
-(*******************************************************************************************)
-W(j, k) ==  \E t \in CT, obj \in Obj, val \in Val : 
-            /\ Write(t, obj, val)
-            /\ M(tenv[t],  benv[Ord(t)+1])=j
-            /\ M(tenv'[t], benv[Ord(t)+1])=k
+Abort(t) == /\ tstate[t] = Open
+            /\ fate[t] = Aborted
+            /\ tr' = t
+            /\ op' = "a"
+            /\ arg' = None
+            /\ rval' = Ok
+            /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+            /\ UNCHANGED <<fate, to, tenv, benv, ff>>
 
 Termination == /\ \A t \in Tr: tstate[t] \in {Committed, Aborted}
                /\ UNCHANGED v
@@ -137,8 +118,23 @@ Next == \/ \E t \in Tr:
                 \/ Write(t, obj, val)
         \/ Termination
 
-L == /\ SF_v(\E t \in Tr: Commit(t))
-     /\ WF_v(\E t \in Tr: Abort(t))
+(*******************************************************************************************)
+(* Number of variables with the same values in environments e1 and e2                      *)
+(*******************************************************************************************)
+M(e1, e2) == Cardinality({obj \in Obj : e1[obj]=e2[obj]})
+
+(*******************************************************************************************)
+(* W(j,k) is true if there's a transaction t doing a write where:                          *)
+(*  1. the number of variables in the 1st state that are equal to the expected values is j *)
+(*  2. the number of variables in the 2nd state that are equal to the expected values is k *)
+(*******************************************************************************************)
+W(j, k) ==  \E t \in CT, obj \in Obj, val \in Val : 
+            /\ Write(t, obj, val)
+            /\ M(tenv[t],  benv[Ord(t)+1])=j
+            /\ M(tenv'[t], benv[Ord(t)+1])=k
+
+L == /\ WF_v(\E t \in Tr: Abort(t))
+     /\ SF_v(\E t \in Tr: Commit(t))
      /\ WF_v(W(0, 1)) 
      /\ \A i \in 1..Cardinality(Obj)-1 : SF_v(W(i, i+1))
 
