@@ -17,10 +17,10 @@ VARIABLES
           (********************************)
           (* externally visible variables *)
           (********************************)
-          tr,   (* transaction *)
           op,   (* operation *)
           arg,  (* operation argument *)
           rval, (* operation return value *)
+          tr,   (* transaction *)
 
           (********************************)
           (* internal variables           *)
