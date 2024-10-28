@@ -84,7 +84,7 @@ Write(t, obj, val) == /\ tstate[t] = Open
                       /\ op' = "w"
                       /\ arg' = <<obj, val>>
                       /\ rval' = Ok
-                      /\ tenv' = IF fate[t] = Committed THEN [tenv EXCEPT ![t] = [@ EXCEPT ![obj]=val]] ELSE tenv
+                      /\ tenv' = IF fate[t] = Committed THEN [tenv EXCEPT ![t][obj]=val] ELSE tenv
                       /\ ff' = Toggle(ff)
                       /\ UNCHANGED <<tstate, fate, to, benv>>
 
