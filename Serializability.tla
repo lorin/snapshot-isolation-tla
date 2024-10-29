@@ -5,8 +5,7 @@ CONSTANTS Tr, Obj, Val,
           Open, Committed, Aborted,
           Ok,
           Flip, Flop,
-          Vinit, 
-          T0, None
+          Vinit, T0, None
 
 (* To check refinement in TLC, we need to specify these as constants *)
 \* T0 == CHOOSE t : t \notin Tr
