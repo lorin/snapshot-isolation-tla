@@ -1,4 +1,7 @@
 ---- MODULE SerializabilityRefinement ----
+(*************************************************************************)
+(* Refinement mapping to show that Serializability implements Sequential *)
+(*************************************************************************)
 EXTENDS Serializability, Sequences, TLC
 
 VARIABLES h, henv, opBar, argBar, rvalBar, envBar, ffBar, serialized
@@ -32,12 +35,18 @@ CommitR(t) == Commit(t) /\ UNCHANGED vars
 AbortR(t) == Abort(t) /\ UNCHANGED vars
 
 ReadR(t, obj, val) == /\ Read(t, obj, val)
-                      /\ h' = IF Commits(t) THEN Append(h, [tr|->t, op|->"r", arg|->arg', rval|->rval']) ELSE h
+                      /\ h' = IF Commits(t) 
+                              THEN Append(h, [tr|->t, op|->"r", 
+                                              arg|->arg', rval|->rval']) 
+                              ELSE h
                       /\ henv' = IF Commits(t) THEN Append(henv, tenv'[t]) ELSE henv
                       /\ UNCHANGED bars
 
 WriteR(t, obj, val) == /\ Write(t, obj, val)
-                       /\ h' = IF Commits(t) THEN Append(h, [tr|->t, op|->"w", arg|->arg', rval|->rval']) ELSE h
+                       /\ h' = IF Commits(t) 
+                               THEN Append(h, [tr|->t, op|->"w", 
+                                               arg|->arg', rval|->rval']) 
+                                ELSE h
                        /\ henv' = IF Commits(t) THEN Append(henv, tenv'[t]) ELSE henv
                        /\ UNCHANGED bars
 
@@ -82,7 +91,8 @@ Issue == LET e == Head(h) IN
          /\ henv' = Tail(henv)
          /\ UNCHANGED serialized
 
-vr == <<h, henv, opBar, argBar, rvalBar, envBar, ffBar, serialized, tr, op, arg, rval, tstate, fate, to, tenv, benv, eval, ff>>
+vr == <<h, henv, opBar, argBar, rvalBar, envBar, ffBar, serialized, tr, 
+        op, arg, rval, tstate, fate, to, tenv, benv, eval, ff>>
 
 TerminationR == /\ Termination 
                 /\ h = <<>>
