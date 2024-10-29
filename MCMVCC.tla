@@ -1,5 +1,5 @@
----- MODULE MCSnapshotIsolation ----
-EXTENDS SnapshotIsolation
+---- MODULE MCMVCC ----
+EXTENDS MVCC
 
 Terminates == <> Done
 

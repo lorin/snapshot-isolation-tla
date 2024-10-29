@@ -1,5 +1,5 @@
----- MODULE MCSnapshotIsolationRefinement ----
-EXTENDS SnapshotIsolationRefinement
+---- MODULE MCMVCCRefinement ----
+EXTENDS MVCCRefinement
 
 CONSTANTS Hmax
 

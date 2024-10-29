@@ -1,5 +1,5 @@
----- MODULE SnapshotIsolationRefinement ----
-EXTENDS SnapshotIsolation, Naturals, Sequences, FiniteSets, TLC
+---- MODULE MVCCRefinement ----
+EXTENDS MVCC, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS NULL, Flip, Flop
 

@@ -1,4 +1,4 @@
----- MODULE SnapshotIsolation ----
+---- MODULE MVCC ----
 
 EXTENDS Naturals, TransitiveClosure
 
