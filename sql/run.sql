@@ -12,7 +12,21 @@ insert into obj (k,v) values ('x', 0), ('y', 0);
 update obj set v=0;
 --
 
+-- Preventing lost updates
 
+-- T1
+begin;
+update obj set v=1 where k='x';
+
+-- T2
+
+begin;
+update obj set v=2 where k='x';
+
+
+
+
+-- Write skew
 
 -- T1
 begin;
@@ -48,6 +62,10 @@ commit;
 
 
 ------------------------
+
+--
+-- Write skew
+---
 
 -- T1
 begin;
