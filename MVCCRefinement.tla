@@ -97,7 +97,7 @@ SetFate == /\ Done
                              benv == ordp.benv
                              to == ordp.to IN
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
-           /\ UNCHANGED <<op, arg, rval, db, vis, tstate, tid, deadlocked, h, canIssue, parity, reads, writes>>
+           /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, canIssue, parity, reads, writes>>
 
 Issue == /\ h # <<>>
          /\ fateIsSet
@@ -112,9 +112,9 @@ Issue == /\ h # <<>>
                        IN IF tstate[e.tr] = Committed /\ e.op = "w"
                           THEN [tenvBar EXCEPT ![t][obj]=val]
                           ELSE tenvBar
-         /\ UNCHANGED <<op, arg, rval, db, vis, tstate, tid, deadlocked, fateIsSet, parity, reads, writes, ord>>
+         /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, fateIsSet, parity, reads, writes, ord>>
 
-vv == <<op, arg, rval, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+vv == <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>
