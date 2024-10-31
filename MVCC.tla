@@ -122,7 +122,7 @@ DetectDeadlock == LET TCD == TC(Deps)
                       stuck == {t \in Tr: <<t, t>> \in TCD} IN 
                   /\ stuck \ deadlocked # {} (* something is stuck that hasn't previously been captured as deadlocked *)
                   /\ deadlocked' = deadlocked \union stuck
-                  /\ UNCHANGED <<op, arg, rval, db, tstate, tid>>
+                  /\ UNCHANGED <<op, arg, rval, db, vis, tstate, tid>>
 
 
 (***********************************************************************)
