@@ -79,7 +79,7 @@ GetVal(t, obj, vist) ==
     LET ver == CHOOSE v \in db[obj] : 
         /\ v.tr \in vist
         /\ ~ \E vv \in db[obj] : /\ vv \in db[obj]
-                               /\ vv.tr \in vis[t]
+                               /\ vv.tr \in vist
                                /\ tid[vv.tr] > tid[v.tr]
      IN ver.val
 

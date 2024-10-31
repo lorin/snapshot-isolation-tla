@@ -90,7 +90,7 @@ SetFate == /\ Done
                 /\ r.benv[1] = SnapInit                         (* first environment msut be the initialization *)
                 /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
                 /\ \A i \in 1..N : LET t == r.to[i] IN
-                    /\ \A obj \in reads[t] : r.benv[i][obj] = GetVal(t, obj, vis[t] \ {t}) (* all non-written reads have to be consistent with transaction's snapshot *)
+                    /\ \A obj \in reads[t] :  r.benv[i][obj] = GetVal(t, obj, vis[t] \ {t}) (* all non-written reads have to be consistent with transaction's snapshot *)
                     /\ \A obj \in writes[t] : r.benv[i+1][obj] = GetVal(t, obj, vis[t]) (* all writes have to be consistent with transaction's environment *)
                     /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] (* if a variable changed, there must be a corresponding write*)
            /\ tenvBar' = LET ordp == ord'
