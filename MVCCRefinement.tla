@@ -11,10 +11,10 @@ TrR == Tr \ {T0}
 (* Committed transactions *)
 CT == {t \in TrR: tstate[t] = Committed}
 
-N == Cardinality(CT) 
+N == Cardinality(CT)
 
 TypeOkR == /\ TypeOk
-           /\ \A i \in DOMAIN h : LET e == h[i] IN 
+           /\ \A i \in DOMAIN h : LET e == h[i] IN
                 /\ e.tr \in TrR
                 /\ e.op \in {"r", "w", "c", "a"}
                 /\ e.arg \in CASE e.op = "r" -> Obj
@@ -23,7 +23,7 @@ TypeOkR == /\ TypeOk
 
                 /\ e.rval \in Val \cup {Ok, Err}
                 /\ e.tstate \in [Tr -> {Unstarted, Open, Committed, Aborted}]
-                /\ e.op \in {"r", "w"} => /\ DOMAIN e.wr \subseteq Obj 
+                /\ e.op \in {"r", "w"} => /\ DOMAIN e.wr \subseteq Obj
                                           /\ \A obj \in DOMAIN e.wr : e.wr[obj] \in Val
 
            /\ fateIsSet \in BOOLEAN
@@ -51,7 +51,7 @@ BeginRdR(t, obj) == /\ BeginRd(t, obj)
                     /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> env[t][o]]])
+                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> GetVal(t,o, vis[t])]])
                        /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
                        /\ parity' = 1 - parity
                        /\ UNCHANGED <<fateIsSet, canIssue, writes, ord, tenvBar>>
@@ -60,7 +60,7 @@ BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
                          /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> env[t][o]]])
+                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> GetVal(t, o, vis[t])]])
                        /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
                        /\ parity' = 1 - parity
                        /\ UNCHANGED <<fateIsSet, canIssue, reads, ord, tenvBar>>
@@ -89,32 +89,32 @@ SetFate == /\ Done
            /\ ord' = CHOOSE r \in [to: [1..N -> CT], benv: [1..N+1 -> [Obj -> Val]]]:
                 /\ r.benv[1] = SnapInit                         (* first environment msut be the initialization *)
                 /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
-                /\ \A i \in 1..N : LET t == r.to[i] IN 
-                    /\ \A obj \in reads[t] : r.benv[i][obj] = snap[t][obj] (* all non-written reads have to be consistent with transaction's snapshot *)
-                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = env[t][obj] (* all writes have to be consistent with transaction's environment *)
+                /\ \A i \in 1..N : LET t == r.to[i] IN
+                    /\ \A obj \in reads[t] : r.benv[i][obj] = GetVal(t, obj, vis[t] \ {t}) (* all non-written reads have to be consistent with transaction's snapshot *)
+                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = GetVal(t, obj, vis[t]) (* all writes have to be consistent with transaction's environment *)
                     /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] (* if a variable changed, there must be a corresponding write*)
            /\ tenvBar' = LET ordp == ord'
                              benv == ordp.benv
                              to == ordp.to IN
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
-           /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, h, canIssue, parity, reads, writes>>
+           /\ UNCHANGED <<op, arg, rval, db, vis, tstate, tid, deadlocked, h, canIssue, parity, reads, writes>>
 
 Issue == /\ h # <<>>
          /\ fateIsSet
          /\ canIssue' = TRUE
          /\ h' = IF canIssue THEN Tail(h) ELSE h
-         /\ h' # <<>>        
+         /\ h' # <<>>
          (* tenvBar' needs to reflect the state of the *next* head in the history, not the current head *)
          /\ tenvBar' = LET e == Head(h')
                            obj == e.arg[1]
-                           val == e.arg[2] 
-                           t == e.tr 
-                       IN IF tstate[e.tr] = Committed /\ e.op = "w" 
-                          THEN [tenvBar EXCEPT ![t][obj]=val] 
+                           val == e.arg[2]
+                           t == e.tr
+                       IN IF tstate[e.tr] = Committed /\ e.op = "w"
+                          THEN [tenvBar EXCEPT ![t][obj]=val]
                           ELSE tenvBar
-         /\ UNCHANGED <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, fateIsSet, parity, reads, writes, ord>>
+         /\ UNCHANGED <<op, arg, rval, db, vis, tstate, tid, deadlocked, fateIsSet, parity, reads, writes, ord>>
 
-vv == <<op, arg, rval, tstate, tid, snap, env, anc, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+vv == <<op, arg, rval, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>

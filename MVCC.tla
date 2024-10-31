@@ -75,9 +75,9 @@ BeginRd(t, obj) == /\ tstate[t] = Open
                    /\ UNCHANGED  <<db, vis, tstate, tid, deadlocked>>
 
 (* Retrieve the value associated with the object for this tranaction *)
-GetVal(t, obj) == 
+GetVal(t, obj, vist) == 
     LET ver == CHOOSE v \in db[obj] : 
-        /\ v.tr \in vis[t]
+        /\ v.tr \in vist
         /\ ~ \E vv \in db[obj] : /\ vv \in db[obj]
                                /\ vv.tr \in vis[t]
                                /\ tid[vv.tr] > tid[v.tr]
@@ -86,7 +86,7 @@ GetVal(t, obj) ==
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
                       /\ arg[t] = obj
-                      /\ val = GetVal(t,obj)
+                      /\ val = GetVal(t, obj, vis[t])
                       /\ rval' = [rval EXCEPT ![t]=val]
                       /\ UNCHANGED <<op, arg, db, db, vis, tstate, tid, deadlocked>>
 

@@ -8,6 +8,7 @@ LimitHistory == Len(h) <= Hmax
 CTs == {t \in Tr \ {T0}: fateBar[t] = Committed}
 
 Alias == [
+    db |-> db,
     tstate |-> tstate,
     tstateBar |-> tstateBar,
     fateBar |-> fateBar,
