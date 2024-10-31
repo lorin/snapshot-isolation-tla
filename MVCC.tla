@@ -27,7 +27,7 @@ VARIABLES
     db,         (* database: contains object versions *)
     vis,        (* set of transactions visible to each transaction *)
     tstate,     (* state of each transaction *)
-    tid,        (* logical timestamp of each transaction *)
+    tid,        (* transaction id: logical timestamp of each transaction *)
     deadlocked (* transactions that have deadlocked *)
 
 
@@ -45,7 +45,7 @@ TypeOk == /\ op \in [Tr -> {"-", "s", "r", "w", "c", "a"}]
 Init == /\ op = [t \in Tr |-> "-"]
         /\ arg = [t \in Tr |-> <<>>]
         /\ rval = [t \in Tr |-> Ok]
-        /\ db = [obj \in Obj |-> [val: V0, tr: T0]]
+        /\ db = [obj \in Obj |-> {[val|-> V0, tr|-> T0]}]
         /\ vis = [tr \in Tr |-> {}]
         /\ tid = [t \in Tr |-> IF t=T0 THEN 0 ELSE None]
         /\ tstate = [t \in Tr |-> IF t=T0 THEN Committed ELSE Unstarted]
@@ -72,7 +72,7 @@ BeginRd(t, obj) == /\ tstate[t] = Open
                    /\ op' = [op EXCEPT ![t]="r"]
                    /\ arg' = [arg EXCEPT ![t]=obj]
                    /\ rval' = [rval EXCEPT ![t]=Busy]
-                   /\ UNCHANGED  <<tstate, tid, vis, deadlocked>>
+                   /\ UNCHANGED  <<db, vis, tstate, tid, deadlocked>>
 
 (* Retrieve the value associated with the object for this tranaction *)
 GetVal(t, obj) == 
@@ -80,7 +80,7 @@ GetVal(t, obj) ==
         /\ v.tr \in vis[t]
         /\ ~ \E vv \in db[obj] : /\ vv \in db[obj]
                                /\ vv.tr \in vis[t]
-                               /\ tid[vv] > tid[v]
+                               /\ tid[vv.tr] > tid[v.tr]
      IN ver.val
 
 EndRd(t, obj, val) == /\ op[t] = "r"
@@ -88,14 +88,14 @@ EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ arg[t] = obj
                       /\ val = GetVal(t,obj)
                       /\ rval' = [rval EXCEPT ![t]=val]
-                      /\ UNCHANGED <<op, arg, db, tstate, tid, deadlocked>>
+                      /\ UNCHANGED <<op, arg, db, db, vis, tstate, tid, deadlocked>>
 
 BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ rval[t] # Busy
                         /\ op' = [op EXCEPT ![t]="w"]
                         /\ arg' = [arg EXCEPT ![t] = <<obj, val>>]
                         /\ rval' = [rval EXCEPT ![t]=Busy]
-                        /\ UNCHANGED  <<tstate, db, tid, deadlocked>>
+                        /\ UNCHANGED  <<db, vis, tid, tstate, deadlocked>>
 
 (*******************************************************************)
 (* True if transaction *t* is active and has modified object *obj* *)
@@ -142,12 +142,15 @@ Concurrent(t1, t2) == /\ t1 \notin vis[t2]
 (*********************************************************************************************************)
 WriteConflict(t, obj) == \E tr \in Tr \{t} : CommittedWrite(tr, obj) /\ Concurrent(t, tr)
 
-EndWr(t, obj, val) == /\ op[t] = "w"
+EndWr(t, obj, val) == LET oldwrites == {v \in db[obj] : v.tr=t}
+                          ver == [val|->val, tr|->t]
+                      IN
+                      /\ op[t] = "w"
                       /\ arg[t] = <<obj, val>>
                       /\ rval[t] = Busy
                       /\ ~ \E tr \in Tr \ {t} : \/ ActiveWrite(tr, obj)
                       /\ ~ WriteConflict(t, obj)
-                      /\ db' = [db EXCEPT ![t][obj]=(@ \ {v \in db[obj] : v.tr=t}) \union {[val|->val, tr|->t]}]
+                      /\ db' = [db EXCEPT ![obj]=(@ \ oldwrites) \union {ver}]
                       /\ rval' = [rval EXCEPT ![t]=Ok]
                       /\ UNCHANGED  <<op, arg, tstate, tid, vis, deadlocked>>
 
@@ -159,7 +162,7 @@ AbortWr(t, obj, val) == /\ op[t] = "w"
                         /\ arg' = [arg EXCEPT ![t] = <<>>]
                         /\ rval' = [rval EXCEPT ![t]=Err]
                         /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-                      /\ UNCHANGED  <<tid, db, vis, deadlocked>>
+                      /\ UNCHANGED  <<db, vis, tid, deadlocked>>
 
 Abort(t) == /\ tstate[t] = Open
             /\ rval[t] # Busy
@@ -167,7 +170,7 @@ Abort(t) == /\ tstate[t] = Open
             /\ arg' = [arg EXCEPT ![t] = <<>>]
             /\ rval' = [rval EXCEPT ![t]=Ok]
             /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-            /\ UNCHANGED <<tid, db, vis, deadlocked>>
+            /\ UNCHANGED <<db, vis, tid, deadlocked>>
 
 Commit(t) == /\ tstate[t] = Open
              /\ rval[t] # Busy
@@ -176,10 +179,10 @@ Commit(t) == /\ tstate[t] = Open
              /\ arg' = [arg EXCEPT ![t] = <<>>]
              /\ rval' = [rval EXCEPT ![t]=Ok]
              /\ tstate' = [tstate EXCEPT ![t] = Committed]
-             /\ UNCHANGED <<tid, vis, deadlocked>>
+             /\ UNCHANGED <<db, vis, tid, deadlocked>>
 
 Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
-v == <<op, arg, rval, tstate, tid, vis, deadlocked>>
+v == <<op, arg, rval, db, tstate, tid, vis, deadlocked>>
 
 Termination == Done /\ UNCHANGED v
 
