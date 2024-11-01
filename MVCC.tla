@@ -81,17 +81,16 @@ BeginRd(t, obj) == /\ tstate[t] = Open
                    /\ tr' = t
                    /\ UNCHANGED  <<db, vis, tstate, tid, deadlocked>>
 
-(* Retrieve the value associated with the object for this tranaction *)
-GetVal(t, obj, vist) == 
-    LET ver == CHOOSE v \in db[obj] : 
-        /\ v.tr \in vist
-        /\ ~ \E vv \in db[obj] : /\ vv \in db[obj]
-                               /\ vv.tr \in vist
-                               /\ tid[vv.tr] > tid[v.tr]
-     IN ver.val
+(***************************************************************************)
+(* Retrieve the version for obj given the set of visible transactions vist *)
+(***************************************************************************)
+GetVer(obj, vist) == CHOOSE v \in db[obj] : 
+    /\ v.tr \in vist
+    /\ ~ \E w \in db[obj] : /\ w \in db[obj]
+                            /\ w.tr \in vist
+                            /\ tid[w.tr] > tid[v.tr]
 
-
-Get(t, obj) == GetVal(t, obj, vis[t])
+Get(t, obj) == GetVer(obj, vis[t]).val
 
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
@@ -107,7 +106,7 @@ BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ arg' = [arg EXCEPT ![t] = <<obj, val>>]
                         /\ rval' = [rval EXCEPT ![t]=Busy]
                         /\ tr' = t
-                        /\ UNCHANGED  <<db, vis, tid, tstate, deadlocked>>
+                        /\ UNCHANGED <<db, vis, tid, tstate, deadlocked>>
 
 (*******************************************************************)
 (* True if transaction *t* is active and has modified object *obj* *)
