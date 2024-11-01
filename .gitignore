@@ -3,3 +3,4 @@
 states
 *.tex
 *.dvi
+src/venv
