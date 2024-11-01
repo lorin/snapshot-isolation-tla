@@ -12,7 +12,7 @@ ASSUME V0 \in Val
 None == CHOOSE n : n \notin Nat
 
 
-VARIABLES 
+VARIABLES
 (********************************)
 (* externally visible variables *)
 (********************************)
@@ -62,7 +62,7 @@ CTs == {t \in Tr: /\ tstate[t] = Committed}
 (* Maximum transaction id *)
 mxid == Max({tid[t] : t \in Tr} \ {None})
 
-StartTransaction(t) == 
+StartTransaction(t) ==
     /\ tstate[t] = Unstarted
     /\ op' = [op EXCEPT ![t] = "s"]
     /\ arg' = [arg EXCEPT ![t] = <<>>]
@@ -84,7 +84,7 @@ BeginRd(t, obj) == /\ tstate[t] = Open
 (***************************************************************************)
 (* Retrieve the version for obj given the set of visible transactions vist *)
 (***************************************************************************)
-GetVer(obj, vist) == CHOOSE v \in db[obj] : 
+GetVer(obj, vist) == CHOOSE v \in db[obj] :
     /\ v.tr \in vist
     /\ ~ \E w \in db[obj] : /\ w \in db[obj]
                             /\ w.tr \in vist
@@ -129,16 +129,17 @@ Deps == {<<Ti, Tj>> \in Tr \X Tr :
 (* Detect if deadlock is currently occurring.               *)
 (* This only fires if there are as-yet-undetected deadlocks *)
 (************************************************************)
-DetectDeadlock == LET TCD == TC(Deps)
-                      stuck == {t \in Tr: <<t, t>> \in TCD} IN 
-                  /\ stuck \ deadlocked # {} (* something is stuck that hasn't previously been captured as deadlocked *)
-                  /\ deadlocked' = deadlocked \union stuck
-                  /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid>>
+DetectDeadlock ==
+    LET TCD == TC(Deps)
+        stuck == {t \in Tr: <<t, t>> \in TCD}
+    IN /\ stuck \ deadlocked # {} (* something is stuck that isn't in the deadlocked set yet *)
+       /\ deadlocked' = deadlocked \union stuck
+       /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid>>
 
 
-(***********************************************************************)
-(* True if transaction *t* is committed and has modified object *obj* *)
-(**********************************************************************)
+(*******************************************************************)
+(* True if transaction t is committed and has modified object obj *)
+(******************************************************************)
 CommittedWrite(t, obj) == /\ tstate[t] = Committed
                           /\ \E ver \in db[obj]: ver.tr = t
 
@@ -213,11 +214,11 @@ Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
         \/ DetectDeadlock
         \/ Termination
 
-L == /\ WF_v(\E t \in Tr, obj \in Obj, val \in Val : 
+L == /\ WF_v(\E t \in Tr, obj \in Obj, val \in Val :
                 \/ EndRd(t, obj, val)
                 \/ EndWr(t, obj, val)
                 \/ AbortWr(t, obj, val))
-     /\ WF_v(\E t \in Tr: \/ StartTransaction(t))
+     /\ WF_v(\E t \in Tr: StartTransaction(t))
      /\ SF_v(\E t \in Tr: Commit(t) \/ Abort(t))
      /\ WF_v(DetectDeadlock)
 
