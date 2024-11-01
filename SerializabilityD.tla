@@ -1,7 +1,7 @@
 ---- MODULE SerializabilityD ----
-(*********************************************************************)
-(* Delay the Serializability spec by one state to support refinement *)
-(*********************************************************************)
+(**********************************************************************)
+(* Delay the Serializability spec by one state to simplify refinement *)
+(**********************************************************************)
 EXTENDS Serializability
 
 CONSTANT NULL
@@ -32,8 +32,7 @@ Predict == LET CTs == {t \in Tr : fate'[t] = Committed} IN
 NextD == \/ Predict
          \/ (Initialized /\ Next)
 
-
-(* Note: skipping liveness for now *)
+(* Note: excluding liveness for now *)
 SpecD == InitD /\ [][NextD]_v 
 
 ====
