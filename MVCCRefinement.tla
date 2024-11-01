@@ -51,7 +51,7 @@ BeginRdR(t, obj) == /\ BeginRd(t, obj)
                     /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> GetVal(t,o, vis[t])]])
+                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
                        /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
                        /\ parity' = 1 - parity
                        /\ UNCHANGED <<fateIsSet, canIssue, writes, ord, tenvBar>>
@@ -60,7 +60,7 @@ BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
                          /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> GetVal(t, o, vis[t])]])
+                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
                        /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
                        /\ parity' = 1 - parity
                        /\ UNCHANGED <<fateIsSet, canIssue, reads, ord, tenvBar>>
@@ -91,7 +91,7 @@ SetFate == /\ Done
                 /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
                 /\ \A i \in 1..N : LET t == r.to[i] IN
                     /\ \A obj \in reads[t] :  r.benv[i][obj] = GetVal(t, obj, vis[t] \ {t}) (* all non-written reads have to be consistent with transaction's snapshot *)
-                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = GetVal(t, obj, vis[t]) (* all writes have to be consistent with transaction's environment *)
+                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = Get(t, obj) (* all writes have to be consistent with transaction's environment *)
                     /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] (* if a variable changed, there must be a corresponding write*)
            /\ tenvBar' = LET ordp == ord'
                              benv == ordp.benv

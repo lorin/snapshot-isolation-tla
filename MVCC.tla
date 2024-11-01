@@ -90,10 +90,13 @@ GetVal(t, obj, vist) ==
                                /\ tid[vv.tr] > tid[v.tr]
      IN ver.val
 
+
+Get(t, obj) == GetVal(t, obj, vis[t])
+
 EndRd(t, obj, val) == /\ op[t] = "r"
                       /\ rval[t] = Busy
                       /\ arg[t] = obj
-                      /\ val = GetVal(t, obj, vis[t])
+                      /\ val = Get(t, obj)
                       /\ tr' = t
                       /\ rval' = [rval EXCEPT ![t]=val]
                       /\ UNCHANGED <<op, arg, db, db, vis, tstate, tid, deadlocked>>
