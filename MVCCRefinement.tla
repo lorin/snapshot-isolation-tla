@@ -50,32 +50,42 @@ StartTransactionR(t) == /\ StartTransaction(t)
 BeginRdR(t, obj) == /\ BeginRd(t, obj)
                     /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-EndRdR(t, obj, val) == /\ EndRd(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
-                       /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
-                       /\ parity' = 1 - parity
-                       /\ UNCHANGED <<fateIsSet, canIssue, writes, ord, tenvBar>>
+EndRdR(t, obj, val) == 
+    /\ EndRd(t, obj, val)
+    /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, 
+                       tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
+    /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
+    /\ parity' = 1 - parity
+    /\ UNCHANGED <<fateIsSet, canIssue, writes, ord, tenvBar>>
 
 BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
                          /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-EndWrR(t, obj, val) == /\ EndWr(t, obj, val)
-                       /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
-                       /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
-                       /\ parity' = 1 - parity
-                       /\ UNCHANGED <<fateIsSet, canIssue, reads, ord, tenvBar>>
+EndWrR(t, obj, val) == 
+    /\ EndWr(t, obj, val)
+    /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, 
+                       tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
+    /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
+    /\ parity' = 1 - parity
+    /\ UNCHANGED <<fateIsSet, canIssue, reads, ord, tenvBar>>
 
-AbortWrR(t, obj, val) == /\ AbortWr(t, obj,val)
-                         /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err, tstate|->[tstate EXCEPT ![t]=Aborted]])
-                         /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+AbortWrR(t, obj, val) == 
+    /\ AbortWr(t, obj,val)
+    /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err, 
+                       tstate|->[tstate EXCEPT ![t]=Aborted]])
+    /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-CommitR(t) == /\ Commit(t)
-              /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, tstate|->[tstate EXCEPT ![t]=Committed]])
-              /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+CommitR(t) == 
+    /\ Commit(t)
+    /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, 
+                       tstate|->[tstate EXCEPT ![t]=Committed]])
+    /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-AbortR(t) == /\ Abort(t)
-             /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, tstate|->[tstate EXCEPT ![t]=Aborted]])
-             /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+AbortR(t) == 
+    /\ Abort(t)
+    /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, 
+                       tstate|->[tstate EXCEPT ![t]=Aborted]])
+    /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 DetectDeadlockR == /\ DetectDeadlock
                    /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
@@ -87,17 +97,23 @@ SetFate == /\ Done
            /\ fateIsSet = FALSE
            /\ fateIsSet' = TRUE
            /\ ord' = CHOOSE r \in [to: [1..N -> CT], benv: [1..N+1 -> [Obj -> Val]]]:
-                /\ r.benv[1] = SnapInit                         (* first environment msut be the initialization *)
-                /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j (* to must be a total ordering *)
+                (* first environment must be the initialization *)
+                /\ r.benv[1] = SnapInit                         
+                (* to must be a total ordering *)
+                /\ \A i,j \in 1..N : r.to[i] = r.to[j] => i = j 
                 /\ \A i \in 1..N : LET t == r.to[i] IN
-                    /\ \A obj \in reads[t] :  r.benv[i][obj] = GetVer(obj, vis[t] \ {t}).val (* all non-written reads have to be consistent with transaction's snapshot *)
-                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = Get(t, obj) (* all writes have to be consistent with transaction's environment *)
-                    /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] (* if a variable changed, there must be a corresponding write*)
+                    (* all non-written reads have to be consistent with transaction's snapshot *)
+                    /\ \A obj \in reads[t] :  r.benv[i][obj] = GetVer(obj, vis[t] \ {t}).val 
+                    (* all writes have to be consistent with transaction's environment *)
+                    /\ \A obj \in writes[t] : r.benv[i+1][obj] = Get(t, obj) 
+                    (* if a variable changed, there must be a corresponding write *)
+                    /\ \A obj \in Obj : (r.benv[i+1][obj] # r.benv[i][obj]) => obj \in writes[t] 
            /\ tenvBar' = LET ordp == ord'
                              benv == ordp.benv
                              to == ordp.to IN
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
-           /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, canIssue, parity, reads, writes>>
+           /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, 
+                          h, canIssue, parity, reads, writes>>
 
 Issue == /\ h # <<>>
          /\ fateIsSet
@@ -112,9 +128,11 @@ Issue == /\ h # <<>>
                        IN IF tstate[e.tr] = Committed /\ e.op = "w"
                           THEN [tenvBar EXCEPT ![t][obj]=val]
                           ELSE tenvBar
-         /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, fateIsSet, parity, reads, writes, ord>>
+         /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, 
+                       fateIsSet, parity, reads, writes, ord>>
 
-vv == <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+vv == <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, 
+       parity, reads, writes, ord, tenvBar>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>
