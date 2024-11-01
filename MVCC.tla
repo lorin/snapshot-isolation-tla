@@ -108,9 +108,9 @@ BeginWr(t, obj, val) == /\ tstate[t] = Open
                         /\ tr' = t
                         /\ UNCHANGED <<db, vis, tid, tstate, deadlocked>>
 
-(*******************************************************************)
-(* True if transaction *t* is active and has modified object *obj* *)
-(*******************************************************************)
+(***************************************************************)
+(* True if transaction t is active and has modified object obj *)
+(***************************************************************)
 ActiveWrite(t, obj) == /\ tstate[t] = Open
                        /\ \E ver \in db[obj]: ver.tr = t
 
@@ -149,9 +149,9 @@ CommittedWrite(t, obj) == /\ tstate[t] = Committed
 Concurrent(t1, t2) == /\ t1 \notin vis[t2]
                       /\ t2 \notin vis[t1]
 
-(*********************************************************************************************************)
-(* True if there is another transaction that has a write conflict with transaction *t* with object *obj* *)
-(*********************************************************************************************************)
+(*****************************************************************************************************)
+(* True if there is another transaction that has a write conflict with transaction t with object obj *)
+(*****************************************************************************************************)
 WriteConflict(t, obj) == \E tt \in Tr \{t} : CommittedWrite(tt, obj) /\ Concurrent(t, tt)
 
 EndWr(t, obj, val) == LET oldwrites == {v \in db[obj] : v.tr=t}
@@ -201,6 +201,11 @@ Done == \A t \in Tr: tstate[t] \in {Committed, Aborted}
 v == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked>>
 
 Termination == Done /\ UNCHANGED v
+
+
+
+
+
 
 Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ StartTransaction(t)
