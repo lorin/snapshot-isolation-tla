@@ -56,7 +56,8 @@ AbortRdS(t, obj) ==
 
 EndRdS(t, obj, val) ==
     LET ver == GetVer(obj, vis[t])
-        newer == IF ver.tr # t THEN { w \in db[obj] : Newer(w, ver) /\ tstate[w] # Aborted} ELSE {}
+        Ab(w) == w.tr = Aborted
+        newer == IF ver.tr # t THEN { w \in db[obj] : Newer(w, ver) /\ ~Ab(w) } ELSE {}
     IN 
        /\ EndRd(t, obj, val)
        /\ ~ReadCreatesPivot(t, obj)
