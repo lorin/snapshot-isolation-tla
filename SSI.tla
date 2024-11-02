@@ -170,7 +170,7 @@ LS == /\ WF_vS(\E t \in Tr: \/ StartTransactionS(t)
       /\ WF_vS(\E t \in Tr, obj \in Obj, val \in Val : 
             \/ EndRdS(t, obj, val)
             \/ EndWrS(t, obj, val))
-      /\ WF_vS(DetectDeadlock)
+      /\ WF_vS(DetectDeadlockS)
       /\ SF_vS(\E t \in Tr: BeginCommit(t) \/ AbortS(t))
 
 
