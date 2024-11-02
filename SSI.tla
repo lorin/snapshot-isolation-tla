@@ -7,14 +7,14 @@ EXTENDS MVCC
 (* outbound: Tr (read)     *)
 (***************************)
 
-VARIABLES reads, inc, outc
+VARIABLES rds, inc, outc
 
-TypeOkS == /\ reads \in [Obj -> SUBSET Tr]
+TypeOkS == /\ rds \in [Obj -> SUBSET Tr]
            /\ inc \subseteq Tr
            /\ outc \subseteq Tr
 
 InitS == /\ Init
-         /\ reads = [obj \in Obj |-> {}]
+         /\ rds = [obj \in Obj |-> {}]
          /\ inc = {}
          /\ outc = {}
 
@@ -22,7 +22,7 @@ BeginRdS(t, obj) ==
     LET isActiveWrite == (\E tw \in Tr : ActiveWrite(tw, obj))
         tw == CHOOSE tw \in Tr : ActiveWrite(tw, obj)
     IN /\ BeginRd(t, obj)
-       /\ reads' = [reads EXCEPT ![obj]=@ \cup {t}]
+       /\ rds' = [rds EXCEPT ![obj]=@ \cup {t}]
        /\ inc' = IF isActiveWrite THEN inc \union {tw} ELSE inc
        /\ outc' = IF isActiveWrite THEN outc \union {t} ELSE outc
    
@@ -52,7 +52,7 @@ AbortRdS(t, obj) ==
        /\ rval' = [rval EXCEPT ![t] = Err]
        /\ tr' = t
        /\ tstate' = [tstate EXCEPT ![t] = Aborted]
-       /\ UNCHANGED <<db, vis, tid, deadlocked, reads, inc, outc>>
+       /\ UNCHANGED <<db, vis, tid, deadlocked, rds, inc, outc>>
 
 EndRdS(t, obj, val) ==
     LET ver == GetVer(obj, vis[t])
@@ -65,7 +65,7 @@ EndRdS(t, obj, val) ==
        /\ inc' = inc \cup {w.tr : w \in newer}
        (* if there are any newer versions, t has an outbound conflict *)
        /\ outc' = IF newer = {} THEN outc ELSE outc \cup {t}
-       /\ UNCHANGED reads
+       /\ UNCHANGED rds
 
 
 (*
@@ -75,7 +75,7 @@ if there is a SIREAD lock(rl) on x
         if rl.owner is committed and rl.owner.inConflict:
 *)
 WriteCreatesPivot(t, obj) ==
-       \E tt \in reads[obj] \ {t} :
+       \E tt \in rds[obj] \ {t} :
          \/ tstate[tt] = Open
          \/ tstate[tt] = Committed /\ Concurrent(t, tt)
 
@@ -90,18 +90,18 @@ AbortWrS(t, obj) ==
           /\ tr' = t
           /\ tstate' = [tstate EXCEPT ![t]=Aborted]
           /\ UNCHANGED <<db, deadlocked, tid, vis>>
-    /\ UNCHANGED <<reads, inc, outc>>
+    /\ UNCHANGED <<rds, inc, outc>>
 
 EndWrS(t, obj, val) ==
         (* active transactions *)
     LET active == {u \in Tr: tstate[u] = Open}
         (* active transactions that are reading obj *)
-        areads == reads[obj] \cap active
+        ards == rds[obj] \cap active
     IN /\ EndWr(t, obj, val)
        /\ ~WriteCreatesPivot(t, obj)
-       /\ outc' = outc \cup areads
-       /\ inc' = IF areads = {} THEN inc ELSE inc \cup {t}
-       /\ UNCHANGED reads
+       /\ outc' = outc \cup ards
+       /\ inc' = IF ards = {} THEN inc ELSE inc \cup {t}
+       /\ UNCHANGED rds
 
 BeginCommit(t) == 
     /\ tstate[t] = Open
@@ -110,7 +110,7 @@ BeginCommit(t) ==
     /\ arg' = [arg EXCEPT ![t] = <<>>]
     /\ rval' = [rval EXCEPT ![t] = Busy]
     /\ tr' = t
-    /\ UNCHANGED <<db, vis, tid, deadlocked, tstate, reads, inc, outc>>
+    /\ UNCHANGED <<db, vis, tid, deadlocked, tstate, rds, inc, outc>>
 
 AbortCommit(t) == 
     /\ op[t] = "c"
@@ -121,7 +121,7 @@ AbortCommit(t) ==
     /\ rval' = [rval EXCEPT ![t]=Err]
     /\ tr' = t
     /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-    /\ UNCHANGED <<db, vis, tid, deadlocked, reads, inc, outc>>
+    /\ UNCHANGED <<db, vis, tid, deadlocked, rds, inc, outc>>
 
 EndCommit(t) ==
     /\ op[t] = "c"
@@ -132,16 +132,16 @@ EndCommit(t) ==
     /\ rval' = [rval EXCEPT ![t]=Ok]
     /\ tr' = t
     /\ tstate' = [tstate EXCEPT ![t] = Committed]
-    /\ UNCHANGED <<db, vis, tid, deadlocked, reads, inc, outc>>
+    /\ UNCHANGED <<db, vis, tid, deadlocked, rds, inc, outc>>
 
 BeginWrS(t, obj, val) ==
     /\ BeginWr(t, obj, val)
-    /\ UNCHANGED <<reads, inc, outc>>
+    /\ UNCHANGED <<rds, inc, outc>>
 
-AbortS(t) == Abort(t) /\ UNCHANGED <<reads, inc, outc>>
-DetectDeadlockS == DetectDeadlock /\ UNCHANGED <<reads, inc, outc>>
-TerminationS == Termination /\ UNCHANGED <<reads, inc, outc>>
-StartTransactionS(t) == StartTransaction(t) /\ UNCHANGED <<reads, inc, outc>>
+AbortS(t) == Abort(t) /\ UNCHANGED <<rds, inc, outc>>
+DetectDeadlockS == DetectDeadlock /\ UNCHANGED <<rds, inc, outc>>
+TerminationS == Termination /\ UNCHANGED <<rds, inc, outc>>
+StartTransactionS(t) == StartTransaction(t) /\ UNCHANGED <<rds, inc, outc>>
 
 NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ StartTransactionS(t)
@@ -158,7 +158,7 @@ NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
         \/ DetectDeadlockS
         \/ TerminationS
 
-vS == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked, reads, inc, outc>>
+vS == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked, rds, inc, outc>>
 
 LS == /\ WF_vS(\E t \in Tr: \/ StartTransactionS(t)
                            \/ AbortCommit(t)

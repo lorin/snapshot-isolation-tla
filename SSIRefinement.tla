@@ -1,5 +1,5 @@
----- MODULE MVCCRefinement ----
-EXTENDS MVCC, Naturals, Sequences, FiniteSets, TLC
+---- MODULE SSIRefinement ----
+EXTENDS SSI, Sequences, FiniteSets
 
 CONSTANTS NULL, Flip, Flop
 
@@ -13,7 +13,7 @@ CT == {t \in TrR: tstate[t] = Committed}
 
 N == Cardinality(CT)
 
-TypeOkR == /\ TypeOk
+TypeOkR == /\ TypeOkS
            /\ \A i \in DOMAIN h : LET e == h[i] IN
                 /\ e.tr \in TrR
                 /\ e.op \in {"r", "w", "c", "a"}
@@ -34,7 +34,7 @@ TypeOkR == /\ TypeOk
            /\ tenvBar \in [CT -> [Obj -> Val]] \cup {NULL}
            /\ ord \in [to: [1..N -> CT] \cup {NULL}, benv: [1..N+1 -> [Obj -> Val]] \cup {NULL}]
 
-InitR == /\ Init
+InitR == /\ InitS
          /\ fateIsSet = FALSE
          /\ parity = 0
          /\ h = <<>>
@@ -44,25 +44,31 @@ InitR == /\ Init
          /\ ord = [to|->NULL, benv|->NULL]
          /\ tenvBar = NULL
 
-StartTransactionR(t) == /\ StartTransaction(t)
+StartTransactionR(t) == /\ StartTransactionS(t)
                         /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-BeginRdR(t, obj) == /\ BeginRd(t, obj)
+BeginRdR(t, obj) == /\ BeginRdS(t, obj)
                     /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
+AbortRdR(t, obj) == 
+    /\ AbortRdS(t, obj)
+    /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err, 
+                       tstate|->[tstate EXCEPT ![t]=Aborted]])
+    /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+
 EndRdR(t, obj, val) == 
-    /\ EndRd(t, obj, val)
+    /\ EndRdS(t, obj, val)
     /\ h' = Append(h, [tr|->t, op|->"r", arg|->obj, rval|->val, 
                        tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
     /\ reads' = IF obj \in writes[t] THEN reads ELSE [reads EXCEPT ![t]=@ \cup {obj}] (* unwritten reads *)
     /\ parity' = 1 - parity
     /\ UNCHANGED <<fateIsSet, canIssue, writes, ord, tenvBar>>
 
-BeginWrR(t, obj, val) == /\ BeginWr(t, obj, val)
+BeginWrR(t, obj, val) == /\ BeginWrS(t, obj, val)
                          /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 EndWrR(t, obj, val) == 
-    /\ EndWr(t, obj, val)
+    /\ EndWrS(t, obj, val)
     /\ h' = Append(h, [tr|->t, op|->"w", arg|-> <<obj, val>>, rval|->Ok, 
                        tstate|->tstate, wr|->[o \in writes[t] |-> Get(t, o)]])
     /\ writes' = [writes EXCEPT ![t]=@ \cup {obj}]
@@ -70,13 +76,22 @@ EndWrR(t, obj, val) ==
     /\ UNCHANGED <<fateIsSet, canIssue, reads, ord, tenvBar>>
 
 AbortWrR(t, obj) == 
-    /\ AbortWr(t, obj)
+    /\ AbortWrS(t, obj)
     /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Err, 
                        tstate|->[tstate EXCEPT ![t]=Aborted]])
     /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-CommitR(t) == 
-    /\ Commit(t)
+BeginCommitR(t) == /\ BeginCommit(t)
+                   /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+
+AbortCommitR(t) == 
+    /\ AbortCommit(t)
+    /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, 
+                       tstate|->[tstate EXCEPT ![t]=Aborted]])
+    /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
+
+EndCommitR(t) == 
+    /\ EndCommit(t)
     /\ h' = Append(h, [tr|->t, op|->"c", arg|-> <<>>, rval|->Ok, 
                        tstate|->[tstate EXCEPT ![t]=Committed]])
     /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
@@ -87,7 +102,7 @@ AbortR(t) ==
                        tstate|->[tstate EXCEPT ![t]=Aborted]])
     /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
-DetectDeadlockR == /\ DetectDeadlock
+DetectDeadlockR == /\ DetectDeadlockS
                    /\ UNCHANGED <<h, fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 (* Get the order in which this transactionruns *)
@@ -113,7 +128,7 @@ SetFate == /\ Done
                              to == ordp.to IN
                 [t \in CT |-> LET i == CHOOSE i \in DOMAIN to: to[i] = t IN benv[i]]
            /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, 
-                          h, canIssue, parity, reads, writes>>
+                          h, canIssue, parity, reads, writes, rds, inc, outc>>
 
 Issue == /\ h # <<>>
          /\ fateIsSet
@@ -129,24 +144,26 @@ Issue == /\ h # <<>>
                           THEN [tenvBar EXCEPT ![t][obj]=val]
                           ELSE tenvBar
          /\ UNCHANGED <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, 
-                       fateIsSet, parity, reads, writes, ord>>
+                       fateIsSet, parity, reads, writes, ord, rds, inc, outc>>
 
 vv == <<op, arg, rval, tr, db, vis, tstate, tid, deadlocked, h, fateIsSet, canIssue, 
-       parity, reads, writes, ord, tenvBar>>
+       parity, reads, writes, ord, tenvBar, rds, inc, outc>>
 
 TerminationR == /\ Done
                 /\ Tail(h) = <<>>
                 /\ UNCHANGED vv
 
-
 NextR == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ StartTransactionR(t)
             \/ BeginRdR(t, obj)
             \/ EndRdR(t, obj, val)
+            \/ AbortRdR(t, obj)
             \/ BeginWrR(t, obj, val)
             \/ EndWrR(t, obj, val)
             \/ AbortWrR(t, obj)
-            \/ CommitR(t)
+            \/ BeginCommitR(t)
+            \/ AbortCommitR(t)
+            \/ EndCommitR(t)
             \/ AbortR(t)
          \/ DetectDeadlockR
          \/ Issue
