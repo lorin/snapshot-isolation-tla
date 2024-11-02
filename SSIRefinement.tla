@@ -97,7 +97,7 @@ EndCommitR(t) ==
     /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
 
 AbortR(t) == 
-    /\ Abort(t)
+    /\ AbortS(t)
     /\ h' = Append(h, [tr|->t, op|->"a", arg|-> <<>>, rval|->Ok, 
                        tstate|->[tstate EXCEPT ![t]=Aborted]])
     /\ UNCHANGED <<fateIsSet, canIssue, parity, reads, writes, ord, tenvBar>>
