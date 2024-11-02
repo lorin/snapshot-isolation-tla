@@ -14,7 +14,7 @@ TypeOkS == /\ reads \in [Obj -> SUBSET Tr]
            /\ outc \subseteq Tr
 
 InitS == /\ Init
-         /\ reads = [t \in Tr |-> {}]
+         /\ reads = [obj \in Obj |-> {}]
          /\ inc = {}
          /\ outc = {}
 
