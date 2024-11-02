@@ -88,6 +88,7 @@ AbortWrS(t, obj) ==
           /\ rval' = [rval EXCEPT ![t]=Err]
           /\ tr' = t
           /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+          /\ UNCHANGED <<db, deadlocked, tid, vis>>
     /\ UNCHANGED <<reads, inc, outc>>
 
 EndWrS(t, obj, val) ==
@@ -136,6 +137,7 @@ BeginWrS(t, obj, val) ==
     /\ BeginWr(t, obj, val)
     /\ UNCHANGED <<reads, inc, outc>>
 
+AbortS(t) == Abort(t) /\ UNCHANGED <<reads, inc, outc>>
 DetectDeadlockS == DetectDeadlock /\ UNCHANGED <<reads, inc, outc>>
 TerminationS == Termination /\ UNCHANGED <<reads, inc, outc>>
 StartTransactionS(t) == StartTransaction(t) /\ UNCHANGED <<reads, inc, outc>>
@@ -151,11 +153,26 @@ NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ BeginCommit(t)
             \/ AbortCommit(t)
             \/ EndCommit(t)
+            \/ AbortS(t)
         \/ DetectDeadlockS
         \/ TerminationS
 
 vS == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked, reads, inc, outc>>
 
-SpecS == InitS /\ [][NextS]_vS
+LS == /\ WF_vS(\E t \in Tr: \/ StartTransactionS(t)
+                           \/ AbortCommit(t)
+                           \/ EndCommit(t)
+                           \/ AbortS(t))
+      /\ WF_vS(\E t \in Tr, obj \in Obj : 
+            \/ AbortRdS(t, obj) 
+            \/ AbortWrS(t, obj))
+      /\ WF_vS(\E t \in Tr, obj \in Obj, val \in Val : 
+            \/ EndRdS(t, obj, val)
+            \/ EndWrS(t, obj, val))
+      /\ WF_vS(DetectDeadlock)
+      /\ SF_vS(\E t \in Tr: BeginCommit(t) \/ AbortS(t))
+
+
+SpecS == InitS /\ [][NextS]_vS /\ LS
 
 ====
