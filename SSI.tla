@@ -18,10 +18,10 @@ InitS == /\ Init
          /\ inc = {}
          /\ outc = {}
 
-BeginRdS(t, obj) == 
+BeginRdS(t, obj) ==
     /\ BeginRd(t, obj)
     /\ reads' = [reads EXCEPT ![obj]=@ \cup {t}]
-    /\ (\E tw \in Tr : ActiveWrite(tw, obj)) => 
+    /\ (\E tw \in Tr : ActiveWrite(tw, obj)) =>
         LET tw == CHOOSE tw \in Tr : ActiveWrite(tw, obj)
         IN /\ inc' = inc \union {tw}
            /\ outc' = outc \union {t}
@@ -34,9 +34,9 @@ Newer(v1, v2) == tid[v1.tr] > tid[v2.tr]
 (************************************************************************)
 (* True when transaction t creates a pivot transaction when reading obj *)
 (************************************************************************)
-ReadCreatesPivot(t, obj) == 
+ReadCreatesPivot(t, obj) ==
     LET v1 == GetVer(obj, vis[t])
-    IN \E v2 \in db[obj] : /\ Newer(v2, v1) 
+    IN \E v2 \in db[obj] : /\ Newer(v2, v1)
                        /\ tstate[v2.tr] = Committed
                        /\ v2.tr \in outc
 
@@ -63,14 +63,22 @@ EndRdS(t, obj, val) ==
        /\ outc' = IF newer = {} THEN outc ELSE outc \cup {t}
        /\ UNCHANGED reads
 
-AbortWrS(t, obj) == 
+(*
+if there is a SIREAD lock(rl) on x
+    with rl.owner is running
+    or commit(rl.owner) > begin(T):
+        if rl.owner is committed and rl.owner.inConflict:
+*)
+WriteCreatesPivot(t, obj) ==
+       \E tt \in reads[obj] \ {t} :
+         \/ tstate[tt] = Open
+         \/ tstate[tt] = Committed /\ Concurrent(t, tt)
+
+AbortWrS(t, obj) ==
     \/ AbortWr(t, obj)
     \/ /\ op[t] = "w"
        /\ rval[t] = Busy
-       /\ reads[obj] \ {t} # {}
-       /\ \E tt \in reads[obj] \ {t} : 
-            \/ tstate[tt] = Open
-            \/ tstate[tt] = Committed /\ Concurrent(t, tt)
+       /\ WriteCreatesPivot(t, obj)
        /\ op' = [op EXCEPT ![t] = "a"]
        /\ arg' = [arg EXCEPT ![t] = <<>>]
        /\ rval' = [rval EXCEPT ![t]=Err]
