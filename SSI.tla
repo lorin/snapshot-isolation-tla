@@ -63,6 +63,7 @@ EndRdS(t, obj, val) ==
        /\ outc' = IF newer = {} THEN outc ELSE outc \cup {t}
        /\ UNCHANGED reads
 
+
 (*
 if there is a SIREAD lock(rl) on x
     with rl.owner is running
@@ -75,22 +76,40 @@ WriteCreatesPivot(t, obj) ==
          \/ tstate[tt] = Committed /\ Concurrent(t, tt)
 
 AbortWrS(t, obj) ==
-    \/ AbortWr(t, obj)
-    \/ /\ op[t] = "w"
-       /\ rval[t] = Busy
-       /\ WriteCreatesPivot(t, obj)
-       /\ op' = [op EXCEPT ![t] = "a"]
-       /\ arg' = [arg EXCEPT ![t] = <<>>]
-       /\ rval' = [rval EXCEPT ![t]=Err]
-       /\ tr' = t
-       /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+    /\ \/ AbortWr(t, obj)
+       \/ /\ op[t] = "w"
+          /\ rval[t] = Busy
+          /\ WriteCreatesPivot(t, obj)
+          /\ op' = [op EXCEPT ![t] = "a"]
+          /\ arg' = [arg EXCEPT ![t] = <<>>]
+          /\ rval' = [rval EXCEPT ![t]=Err]
+          /\ tr' = t
+          /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+    /\ UNCHANGED <<reads, inc, outc>>
 
+
+EndWrS(t, obj, val) ==
+        (* active transactions *)
+    LET active == {u \in Tr: tstate[u] = Open}
+        (* active transactions that are reading obj *)
+        areads == reads[obj] \cap active
+    IN /\ EndWr(t, obj, val)
+       /\ ~WriteCreatesPivot(t, obj)
+       /\ outc' = outc \cup areads
+       /\ inc' = IF areads = {} THEN inc ELSE inc \cup {t}
+       /\ UNCHANGED reads
+
+BeginWrS(t, obj, val) ==
+    /\ BeginWr(t, obj, val)
+    /\ UNCHANGED <<reads, inc, outc>>
 
 NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ BeginRdS(t, obj)
-            \/ EndRdS(t, obj, val)
             \/ AbortRdS(t, obj)
+            \/ EndRdS(t, obj, val)
+            \/ BeginWrS(t, obj, val)
             \/ AbortWrS(t, obj)
+            \/ EndWrS(t, obj, val)
 
 SpecS == InitS
 
