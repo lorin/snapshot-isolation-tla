@@ -167,16 +167,16 @@ EndWr(t, obj, val) == LET oldwrites == {v \in db[obj] : v.tr=t}
                       /\ tr' = t
                       /\ UNCHANGED  <<op, arg, tstate, tid, vis, deadlocked>>
 
-AbortWr(t, obj, val) == /\ op[t] = "w"
-                        /\ rval[t] = Busy
-                        /\ \/ WriteConflict(t, obj)
-                           \/ t \in deadlocked
-                        /\ op' = [op EXCEPT ![t] = "a"]
-                        /\ arg' = [arg EXCEPT ![t] = <<>>]
-                        /\ rval' = [rval EXCEPT ![t]=Err]
-                        /\ tr' = t
-                        /\ tstate' = [tstate EXCEPT ![t]=Aborted]
-                      /\ UNCHANGED  <<db, vis, tid, deadlocked>>
+AbortWr(t, obj) == /\ op[t] = "w"
+                   /\ rval[t] = Busy
+                   /\ \/ WriteConflict(t, obj)
+                      \/ t \in deadlocked
+                   /\ op' = [op EXCEPT ![t] = "a"]
+                   /\ arg' = [arg EXCEPT ![t] = <<>>]
+                   /\ rval' = [rval EXCEPT ![t]=Err]
+                   /\ tr' = t
+                   /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+                   /\ UNCHANGED  <<db, vis, tid, deadlocked>>
 
 Abort(t) == /\ tstate[t] = Open
             /\ rval[t] # Busy
@@ -213,7 +213,7 @@ Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ EndRd(t, obj, val)
             \/ BeginWr(t, obj, val)
             \/ EndWr(t, obj, val)
-            \/ AbortWr(t, obj, val)
+            \/ AbortWr(t, obj)
             \/ Commit(t)
             \/ Abort(t)
         \/ DetectDeadlock
@@ -222,7 +222,7 @@ Next == \/ \E t \in Tr, obj \in Obj, val \in Val:
 L == /\ WF_v(\E t \in Tr, obj \in Obj, val \in Val :
                 \/ EndRd(t, obj, val)
                 \/ EndWr(t, obj, val)
-                \/ AbortWr(t, obj, val))
+                \/ AbortWr(t, obj))
      /\ WF_v(\E t \in Tr: StartTransaction(t))
      /\ SF_v(\E t \in Tr: Commit(t) \/ Abort(t))
      /\ WF_v(DetectDeadlock)
