@@ -19,13 +19,13 @@ InitS == /\ Init
          /\ outc = {}
 
 BeginRdS(t, obj) ==
-    /\ BeginRd(t, obj)
-    /\ reads' = [reads EXCEPT ![obj]=@ \cup {t}]
-    /\ (\E tw \in Tr : ActiveWrite(tw, obj)) =>
-        LET tw == CHOOSE tw \in Tr : ActiveWrite(tw, obj)
-        IN /\ inc' = inc \union {tw}
-           /\ outc' = outc \union {t}
-
+    LET isActiveWrite == (\E tw \in Tr : ActiveWrite(tw, obj))
+        tw == CHOOSE tw \in Tr : ActiveWrite(tw, obj)
+    IN /\ BeginRd(t, obj)
+       /\ reads' = [reads EXCEPT ![obj]=@ \cup {t}]
+       /\ inc' = IF isActiveWrite THEN inc \union {tw} ELSE inc
+       /\ outc' = IF isActiveWrite THEN outc \union {t} ELSE outc
+   
 (*****************************************************)
 (* object version v1 is newer than object version v2 *)
 (*****************************************************)
@@ -35,10 +35,10 @@ Newer(v1, v2) == tid[v1.tr] > tid[v2.tr]
 (* True when transaction t creates a pivot transaction when reading obj *)
 (************************************************************************)
 ReadCreatesPivot(t, obj) ==
-    LET v1 == GetVer(obj, vis[t])
-    IN \E v2 \in db[obj] : /\ Newer(v2, v1)
-                       /\ tstate[v2.tr] = Committed
-                       /\ v2.tr \in outc
+    LET vr == GetVer(obj, vis[t])
+    IN \E vw \in db[obj] : /\ Newer(vw, vr)
+                           /\ tstate[vw.tr] = Committed
+                           /\ vw.tr \in outc
 
 AbortRdS(t, obj) ==
        /\ op[t] = "r"
@@ -87,7 +87,6 @@ AbortWrS(t, obj) ==
           /\ tstate' = [tstate EXCEPT ![t]=Aborted]
     /\ UNCHANGED <<reads, inc, outc>>
 
-
 EndWrS(t, obj, val) ==
         (* active transactions *)
     LET active == {u \in Tr: tstate[u] = Open}
@@ -99,9 +98,46 @@ EndWrS(t, obj, val) ==
        /\ inc' = IF areads = {} THEN inc ELSE inc \cup {t}
        /\ UNCHANGED reads
 
+BeginCommit(t) == 
+    /\ tstate[t] = Open
+    /\ rval[t] # Busy
+    /\ op' = [op EXCEPT ![t]="c"]
+    /\ arg' = [arg EXCEPT ![t] = <<>>]
+    /\ rval' = [rval EXCEPT ![t] = Busy]
+    /\ tr' = t
+    /\ UNCHANGED <<db, vis, tid, deadlocked, tstate, reads, inc, outc>>
+
+AbortCommit(t) == 
+    /\ op[t] = "c"
+    /\ rval[t] = Busy
+    /\ t \in inc \cap outc
+    /\ op' = [op EXCEPT ![t] = "a"]
+    /\ arg' = [arg EXCEPT ![t] = <<>>]
+    /\ rval' = [rval EXCEPT ![t]=Err]
+    /\ tr' = t
+    /\ tstate' = [tstate EXCEPT ![t]=Aborted]
+    /\ UNCHANGED <<db, vis, tid, deadlocked, reads, inc, outc>>
+
+EndCommit(t) ==
+    /\ op[t] = "c"
+    /\ rval[t] = Busy
+    /\ t \notin inc \cap outc
+    /\ op' = [op EXCEPT ![t]="c"]
+    /\ arg' = [arg EXCEPT ![t] = <<>>]
+    /\ rval' = [rval EXCEPT ![t]=Ok]
+    /\ tr' = t
+    /\ tstate' = [tstate EXCEPT ![t] = Committed]
+    /\ UNCHANGED <<db, vis, tid, deadlocked, reads, inc, outc>>
+
 BeginWrS(t, obj, val) ==
     /\ BeginWr(t, obj, val)
     /\ UNCHANGED <<reads, inc, outc>>
+
+DetectDeadlockS == /\ DetectDeadlock
+                   /\ UNCHANGED <<reads, inc, outc>>
+
+TerminationS == /\ Termination
+                /\ UNCHANGED <<reads, inc, outc>>
 
 NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ BeginRdS(t, obj)
@@ -110,7 +146,14 @@ NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
             \/ BeginWrS(t, obj, val)
             \/ AbortWrS(t, obj)
             \/ EndWrS(t, obj, val)
+            \/ BeginCommit(t)
+            \/ AbortCommit(t)
+            \/ EndCommit(t)
+        \/ DetectDeadlockS
+        \/ TerminationS
 
-SpecS == InitS
+vS == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked, reads, inc, outc>>
+
+SpecS == InitS /\ [][Next]_vS
 
 ====
