@@ -33,10 +33,11 @@ Newer(v1, v2) == tid[v1.tr] > tid[v2.tr]
 (************************************************************************)
 (* True when transaction t creates a pivot transaction when reading obj *)
 (************************************************************************)
-ReadCreatesPivot(t, obj) == LET ver == GetVer(obj, vis[t])
-    IN \E v \in db[obj] : /\ Newer(v, ver) 
-                       /\ tstate[v.tr] = Committed
-                       /\ v.tr \in outc
+ReadCreatesPivot(t, obj) == 
+    LET v1 == GetVer(obj, vis[t])
+    IN \E v2 \in db[obj] : /\ Newer(v2, v1) 
+                       /\ tstate[v2.tr] = Committed
+                       /\ v2.tr \in outc
 
 AbortRdS(t, obj) ==
        /\ op[t] = "r"
