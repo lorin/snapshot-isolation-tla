@@ -36,7 +36,9 @@ Newer(v1, v2) == tid[v1.tr] > tid[v2.tr]
 (************************************************************************)
 ReadCreatesPivot(t, obj) ==
     LET vr == GetVer(obj, vis[t])
-    IN \E vw \in db[obj] : /\ Newer(vw, vr)
+    IN 
+    /\ vr.tr # t (* reading our own write cannot create a pivot *)
+    /\ \E vw \in db[obj] : /\ Concurrent(vr.tr, vw.tr)
                            /\ tstate[vw.tr] = Committed
                            /\ vw.tr \in outc
 
@@ -54,7 +56,7 @@ AbortRdS(t, obj) ==
 
 EndRdS(t, obj, val) ==
     LET ver == GetVer(obj, vis[t])
-        newer == { w \in db[obj] : Newer(w, ver) /\ tstate[w] # Aborted}
+        newer == IF ver.tr # t THEN { w \in db[obj] : Newer(w, ver) /\ tstate[w] # Aborted} ELSE {}
     IN /\ ~ReadCreatesPivot(t, obj)
        /\ EndRd(t, obj, val)
        (* each later transaction that wrote has an inbound conflict *)
@@ -133,13 +135,12 @@ BeginWrS(t, obj, val) ==
     /\ BeginWr(t, obj, val)
     /\ UNCHANGED <<reads, inc, outc>>
 
-DetectDeadlockS == /\ DetectDeadlock
-                   /\ UNCHANGED <<reads, inc, outc>>
-
-TerminationS == /\ Termination
-                /\ UNCHANGED <<reads, inc, outc>>
+DetectDeadlockS == DetectDeadlock /\ UNCHANGED <<reads, inc, outc>>
+TerminationS == Termination /\ UNCHANGED <<reads, inc, outc>>
+StartTransactionS(t) == StartTransaction(t) /\ UNCHANGED <<reads, inc, outc>>
 
 NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
+            \/ StartTransactionS(t)
             \/ BeginRdS(t, obj)
             \/ AbortRdS(t, obj)
             \/ EndRdS(t, obj, val)
@@ -154,6 +155,6 @@ NextS == \/ \E t \in Tr, obj \in Obj, val \in Val:
 
 vS == <<op, arg, rval, tr, db, tstate, tid, vis, deadlocked, reads, inc, outc>>
 
-SpecS == InitS /\ [][Next]_vS
+SpecS == InitS /\ [][NextS]_vS
 
 ====
