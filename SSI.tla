@@ -57,8 +57,9 @@ AbortRdS(t, obj) ==
 EndRdS(t, obj, val) ==
     LET ver == GetVer(obj, vis[t])
         newer == IF ver.tr # t THEN { w \in db[obj] : Newer(w, ver) /\ tstate[w] # Aborted} ELSE {}
-    IN /\ ~ReadCreatesPivot(t, obj)
+    IN 
        /\ EndRd(t, obj, val)
+       /\ ~ReadCreatesPivot(t, obj)
        (* each later transaction that wrote has an inbound conflict *)
        /\ inc' = inc \cup {w.tr : w \in newer}
        (* if there are any newer versions, t has an outbound conflict *)
