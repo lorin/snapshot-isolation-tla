@@ -42,7 +42,7 @@ ReadCreatesPivot(t, obj) ==
     LET vr == GetVer(obj, vis[t])
     IN 
     /\ vr.tr # t (* reading our own write cannot create a pivot *)
-    /\ \E vw \in db[obj] : /\ Concurrent(vr.tr, vw.tr)
+    /\ \E vw \in db[obj] : /\ Concurrent(t, vw.tr)
                            /\ tstate[vw.tr] = Committed
                            /\ vw.tr \in outc
 
