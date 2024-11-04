@@ -4,7 +4,7 @@
 (*                                                                     *)
 (* Based on the algorithm described in the paper:                      *)
 (*                                                                     *)
-(* Serializable Isolation for Snapshot Databases                       *)
+(* Serializable Isolation for Snapshot Databases,                      *)
 (* Michael J. Cahill, Uwe Röhm, Alan D. Fekete, SIGMOD '08, June 2008. *)
 (*                                                                     *)
 (***********************************************************************)
@@ -27,13 +27,22 @@ InitS == /\ Init
 BeginRdS(t, obj) ==
     LET isActiveWrite == (\E tw \in Tr \ {t}: ActiveWrite(tw, obj))
         tw == CHOOSE tw \in Tr \ {t} : ActiveWrite(tw, obj)
+        localWriteToObj == \E ver \in db[obj]: ver.tr = t
     IN /\ BeginRd(t, obj)
-       /\ rds' = [rds EXCEPT ![obj]=@ \cup {t}]
+          (* if t has written to obj, there's no anti-dependency *)
+       /\ rds' = IF localWriteToObj THEN rds ELSE [rds EXCEPT ![obj]=@ \cup {t}]
        /\ inc' = IF isActiveWrite THEN inc \union {tw} ELSE inc
        /\ outc' = IF isActiveWrite THEN outc \union {t} ELSE outc
    
+
 (************************************************************************)
 (* True when transaction t creates a pivot transaction when reading obj *)
+(*                                                                      *)
+(* From Cahill et al.:                                                  *)
+(* for each version (xNew) of x                                         *)
+(* that is newer than what T read:                                      *)
+(*     if xNew.creator is committed and xNew.creator.outConflict:       *)
+(*         abort(T)                                                     *)
 (************************************************************************)
 ReadCreatesPivot(t, obj) ==
     LET vr == GetVer(obj, vis[t])
@@ -73,13 +82,16 @@ EndRdS(t, obj, val) ==
        /\ UNCHANGED rds
 
 
-(*
-if there is a SIREAD lock(rl) on x
-    with rl.owner is running
-    or commit(rl.owner) > begin(T):
-        if rl.owner is committed and rl.owner.inConflict:
-            ABORT
-*)
+(************************************************************************)
+(* True when transaction t creates a pivot transaction when reading obj *)
+(*                                                                      *)
+(* From Cahill et al.:                                                  *)
+(* if there is a SIREAD lock(rl) on x                                   *)
+(*     with rl.owner is running                                         *)
+(*     or commit(rl.owner) > begin(T):                                  *)
+(*         if rl.owner is committed and rl.owner.inConflict:            *)
+(*             abort(T)                                                 *)
+(************************************************************************)
 WriteCreatesPivot(t, obj) ==
        \E tt \in rds[obj] \ {t} :
         /\ \/ tstate[tt] = Open
@@ -119,10 +131,13 @@ BeginCommit(t) ==
     /\ tr' = t
     /\ UNCHANGED <<db, vis, tid, deadlocked, tstate, rds, outc, inc>>
 
+(*****************************************************)
+(* Abort if commit would create a pivot transaction. *)
+(*****************************************************)
 AbortCommit(t) == 
     /\ op[t] = "c"
     /\ rval[t] = Busy
-    /\ t \in inc \cap outc
+    /\ t \in inc \cap outc (* pivot check *)
     /\ op' = [op EXCEPT ![t] = "a"]
     /\ arg' = [arg EXCEPT ![t] = <<>>]
     /\ rval' = [rval EXCEPT ![t]=Err]
