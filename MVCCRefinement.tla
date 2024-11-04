@@ -199,4 +199,6 @@ Ser == INSTANCE SerializabilityD WITH
 
 SerSpec == Ser!SpecD
 
+THEOREM SpecR => SerSpec
+
 ====
