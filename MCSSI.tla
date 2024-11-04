@@ -14,9 +14,14 @@ NeverAbortsCommit == ~ \E t \in Tr:
     /\ rval[t] = Busy
     /\ t \in inc \cap outc
 
+NeverAbortsWrite == ~ \E t \in Tr, obj \in Obj:
+       /\ op[t] = "w"
+       /\ rval[t] = Busy
+       /\ WriteCreatesPivot(t, obj)
+
 Symmetry == Permutations(Tr) \cup Permutations(Obj) \cup Permutations(Val)
 
-DontWriteV0 == ~\E t \in Tr: op[t] = "w" /\ arg[t][2] = V0
+DontWriteV0 == ~\E t \in Tr: (op[t] = "w" /\ arg[t][2] = V0)
 
 SpecSWOL == InitS /\ [][NextS]_vS
 

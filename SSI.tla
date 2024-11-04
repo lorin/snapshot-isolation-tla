@@ -78,11 +78,13 @@ if there is a SIREAD lock(rl) on x
     with rl.owner is running
     or commit(rl.owner) > begin(T):
         if rl.owner is committed and rl.owner.inConflict:
+            ABORT
 *)
 WriteCreatesPivot(t, obj) ==
        \E tt \in rds[obj] \ {t} :
-         \/ tstate[tt] = Open
-         \/ tstate[tt] = Committed /\ Concurrent(t, tt)
+        /\ \/ tstate[tt] = Open
+           \/ tstate[tt] = Committed /\ Concurrent(t, tt)
+        /\ tt \in inc
 
 AbortWrS(t, obj) ==
     /\ \/ AbortWr(t, obj)
