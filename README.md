@@ -2,8 +2,8 @@
 
 ## Blog posts
 
-* [Specifying serializability in TLA+]
-* [Multi-version concurrency control in TLA+]
+* [Specifying serializability in TLA+][1]
+* [Multi-version concurrency control in TLA+][2]
 * [Extending MVCC to be serializable, in TLA+][3]
 
 
